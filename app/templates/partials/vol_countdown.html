@@ -1,0 +1,75 @@
+{% if event %}
+<div class="px-3 py-3 border-b border-gray-800">
+    <div class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+        <svg class="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+        </svg>
+        Next Vol Event
+    </div>
+    <div class="text-[10px] text-gray-400 mb-0.5">
+        {{ event.country }} · {{ event.day_label }} {{ event.time }}
+    </div>
+    <div class="text-xs text-gray-200 font-medium mb-1.5 leading-tight">
+        {{ event.title }}
+    </div>
+    <div class="text-sm font-mono font-bold tabular-nums"
+         id="vol-countdown-timer"
+         data-event-date="{{ event.date }}"
+         data-event-time="{{ event.time }}"
+         style="color: #fbbf24;">
+        --:--:--
+    </div>
+    {% if event.impact == "High" %}
+    <div class="flex gap-0.5 mt-1">
+        <div class="w-1.5 h-1.5 rounded-full bg-loss"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-loss"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-loss"></div>
+        <span class="text-[9px] text-loss ml-1">High Impact</span>
+    </div>
+    {% elif event.impact == "Medium" %}
+    <div class="flex gap-0.5 mt-1">
+        <div class="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-gray-600"></div>
+        <span class="text-[9px] text-amber-500 ml-1">Medium</span>
+    </div>
+    {% endif %}
+</div>
+<script>
+(function() {
+    var el = document.getElementById('vol-countdown-timer');
+    if (!el) return;
+    var dateStr = el.dataset.eventDate;
+    var timeStr = el.dataset.eventTime;
+    var eventTime = new Date(dateStr + 'T' + timeStr + ':00');
+
+    function tick() {
+        var now = new Date();
+        var diff = eventTime - now;
+        if (diff <= 0) {
+            el.textContent = 'LIVE NOW';
+            el.style.color = '#ef4444';
+            return;
+        }
+        var h = Math.floor(diff / 3600000);
+        var m = Math.floor((diff % 3600000) / 60000);
+        var s = Math.floor((diff % 60000) / 1000);
+        el.textContent = (h > 0 ? h + 'h ' : '') + String(m).padStart(2, '0') + 'm ' + String(s).padStart(2, '0') + 's';
+
+        if (diff < 3600000) {
+            el.style.color = '#ef4444';
+        } else if (diff < 14400000) {
+            el.style.color = '#fbbf24';
+        } else {
+            el.style.color = '#9ca3af';
+        }
+    }
+    tick();
+    setInterval(tick, 1000);
+})();
+</script>
+{% else %}
+<div class="px-3 py-3 border-b border-gray-800">
+    <div class="text-[10px] text-gray-600">No upcoming events</div>
+</div>
+{% endif %}

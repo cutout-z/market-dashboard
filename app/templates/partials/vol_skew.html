@@ -1,0 +1,101 @@
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-gray-300">
+            Volatility Skew
+            {% if skew.get("underlying") %}
+            <span class="text-[10px] font-normal text-gray-500 ml-1">{{ skew.underlying }}</span>
+            {% endif %}
+        </h3>
+        {% if skew.get("skew_25d") is not none %}
+        <div class="text-right">
+            <div class="text-[10px] text-gray-500">25Δ Put-Call Skew</div>
+            <div class="text-sm font-mono font-bold
+                {% if skew.skew_25d > 5 %}text-loss{% elif skew.skew_25d > 2 %}text-amber-400{% else %}text-gray-300{% endif %}">
+                {{ "{:+.1f}".format(skew.skew_25d) }} pts
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if skew.get("strikes") and skew.strikes | length > 0 %}
+    <div class="flex items-center gap-4 mb-2 text-[10px] text-gray-500">
+        <span>Spot: <span class="text-gray-300 font-mono">{{ skew.spot }}</span></span>
+        <span>Expiry: <span class="text-gray-300">{{ skew.expiry }}</span></span>
+    </div>
+
+    <div id="vol-skew-chart" style="height: 240px;"></div>
+    <script>
+    (function() {
+        var strikes = {{ skew.strikes | tojson }};
+        var putIV = {{ skew.put_iv | tojson }};
+        var callIV = {{ skew.call_iv | tojson }};
+        var spot = {{ skew.spot }};
+
+        var putTrace = {
+            x: strikes, y: putIV,
+            name: 'Put IV',
+            type: 'scatter', mode: 'lines',
+            line: { color: '#ef4444', width: 2 },
+            connectgaps: true,
+            hovertemplate: 'Strike: %{x}<br>Put IV: %{y:.1f}%<extra></extra>',
+        };
+        var callTrace = {
+            x: strikes, y: callIV,
+            name: 'Call IV',
+            type: 'scatter', mode: 'lines',
+            line: { color: '#22c55e', width: 2 },
+            connectgaps: true,
+            hovertemplate: 'Strike: %{x}<br>Call IV: %{y:.1f}%<extra></extra>',
+        };
+
+        var layout = {
+            paper_bgcolor: 'transparent',
+            plot_bgcolor: 'transparent',
+            margin: { t: 5, r: 20, b: 40, l: 50 },
+            xaxis: {
+                color: '#6b7280', gridcolor: 'rgba(55,65,81,0.3)',
+                tickfont: { size: 10 },
+                title: { text: 'Strike', font: { size: 10, color: '#6b7280' } },
+            },
+            yaxis: {
+                color: '#6b7280', gridcolor: 'rgba(55,65,81,0.3)',
+                tickfont: { size: 10 },
+                title: { text: 'Implied Vol (%)', font: { size: 10, color: '#6b7280' } },
+            },
+            legend: {
+                font: { size: 10, color: '#9ca3af' },
+                bgcolor: 'transparent',
+                x: 0.01, y: 0.99,
+            },
+            font: { family: 'ui-monospace, monospace' },
+            shapes: [{
+                type: 'line', x0: spot, x1: spot, y0: 0, y1: 1, yref: 'paper',
+                line: { color: '#6b7280', width: 1, dash: 'dot' },
+            }],
+            annotations: [{
+                x: spot, y: 1, yref: 'paper',
+                text: 'ATM', showarrow: false,
+                font: { size: 9, color: '#6b7280' },
+                yanchor: 'bottom',
+            }],
+        };
+
+        Plotly.newPlot('vol-skew-chart', [putTrace, callTrace], layout, { responsive: true, displayModeBar: false });
+    })();
+    </script>
+
+    <div class="mt-2 text-[10px] text-gray-600">
+        {% if skew.get("skew_25d") is not none and skew.skew_25d > 5 %}
+        Steep put skew — heavy demand for downside protection. Pros buying insurance.
+        {% elif skew.get("skew_25d") is not none and skew.skew_25d > 2 %}
+        Moderate put skew — normal hedging activity.
+        {% elif skew.get("skew_25d") is not none %}
+        Flat skew — balanced put/call demand. Low fear premium.
+        {% endif %}
+    </div>
+    {% elif skew.get("error") %}
+    <div class="text-center text-gray-500 text-sm py-6">{{ skew.error }}</div>
+    {% else %}
+    <div class="text-center text-gray-500 text-sm py-6">Loading volatility skew...</div>
+    {% endif %}
+</div>

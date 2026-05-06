@@ -1,0 +1,46 @@
+<h3 class="text-sm font-semibold text-gray-300 mb-3">Polymarket — Prediction Markets</h3>
+
+{% if error %}
+<div class="text-xs text-yellow-500/80 mb-2 p-2 rounded bg-yellow-500/5 border border-yellow-500/10">
+    {{ error }}
+</div>
+{% endif %}
+
+{% if items %}
+<div class="space-y-2">
+    {% for item in items %}
+    <div class="p-2.5 rounded-md bg-gray-900/50 border border-gray-800/50 hover:border-gray-700 transition-colors">
+        <div class="text-xs text-gray-200 font-medium mb-1.5 leading-snug">{{ item.title }}</div>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                {% if item.odds_yes is not none %}
+                <div>
+                    <span class="text-[10px] text-gray-500">YES</span>
+                    <span class="text-xs font-mono font-medium
+                        {% if item.odds_yes > 70 %}text-gain{% elif item.odds_yes < 30 %}text-loss{% else %}text-gray-300{% endif %}">
+                        {{ item.odds_yes }}%
+                    </span>
+                </div>
+                {% endif %}
+                {% if item.odds_no is not none %}
+                <div>
+                    <span class="text-[10px] text-gray-500">NO</span>
+                    <span class="text-xs font-mono text-gray-400">{{ item.odds_no }}%</span>
+                </div>
+                {% endif %}
+            </div>
+            {% if item.volume %}
+            <div class="text-[10px] text-gray-600">${{ "{:,.0f}".format(item.volume) }} vol</div>
+            {% endif %}
+        </div>
+        {% if item.odds_yes is not none %}
+        <div class="mt-1.5 h-1 rounded-full bg-gray-800 overflow-hidden">
+            <div class="h-full rounded-full bg-blue-500/60" style="width: {{ item.odds_yes }}%"></div>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-gray-500 text-sm py-6">No prediction market data</div>
+{% endif %}

@@ -1,0 +1,280 @@
+{# ─── Reusable macros ─── #}
+
+{% macro yield_table(title, yields_data) %}
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+    <h3 class="text-sm font-semibold text-gray-300 mb-3">{{ title }}</h3>
+    {% if yields_data and yields_data|length > 0 %}
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-xs text-gray-500 border-b border-gray-800">
+                <th class="text-left py-2">Maturity</th>
+                <th class="text-right py-2">Yield</th>
+                <th class="text-right py-2">Change</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in yields_data %}
+            {% set yld = item.value if item.value is defined and item.value is not none else item.yield_pct if item.yield_pct is defined else none %}
+            <tr class="border-b border-gray-800/30 hover:bg-surface-light">
+                <td class="py-2 text-gray-200 font-medium">{{ item.name }}</td>
+                <td class="py-2 text-right font-mono text-gray-300">
+                    {% if yld is not none %}{{ "{:.3f}%".format(yld) }}{% else %}—{% endif %}
+                </td>
+                <td class="py-2 text-right font-mono text-xs
+                    {% if item.change is not none %}
+                        {% if item.change > 0 %}text-loss{% elif item.change < 0 %}text-gain{% else %}text-gray-400{% endif %}
+                    {% endif %}">
+                    {% if item.change is not none %}{{ "{:+.3f}".format(item.change) }}{% else %}—{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="text-center text-gray-500 text-sm py-4">No data available</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro curve_chart(chart_id, title, curve_data, color) %}
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+    <h3 class="text-sm font-semibold text-gray-300 mb-3">{{ title }}</h3>
+    <div id="{{ chart_id }}" style="height: 300px;"></div>
+    {% if curve_data and curve_data.maturities and curve_data.maturities|length > 1 %}
+    <script>
+        (function() {
+            Plotly.newPlot('{{ chart_id }}', [{
+                x: {{ curve_data.maturities | tojson }},
+                y: {{ curve_data.yields | tojson }},
+                text: {{ curve_data.labels | tojson }},
+                mode: 'lines+markers',
+                line: { color: '{{ color }}', width: 2.5, shape: 'spline' },
+                marker: { size: 8, color: '{{ color }}' },
+                fill: 'tozeroy',
+                fillcolor: '{{ color }}11',
+                hovertemplate: '%{text}<br>Maturity: %{x}Y<br>Yield: %{y:.3f}%<extra></extra>',
+            }], {
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent',
+                font: { color: '#9ca3af', size: 11 },
+                margin: { t: 10, r: 20, b: 40, l: 50 },
+                xaxis: {
+                    title: 'Maturity (Years)',
+                    gridcolor: '#1f2937',
+                    tickvals: {{ curve_data.maturities | tojson }},
+                    ticktext: {{ curve_data.labels | tojson }},
+                },
+                yaxis: {
+                    title: 'Yield (%)',
+                    gridcolor: '#1f2937',
+                },
+            }, { responsive: true, displayModeBar: false });
+        })();
+    </script>
+    {% else %}
+    <div class="flex items-center justify-center h-64 text-gray-500 text-sm">No yield data available</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro spread_cards(spreads) %}
+{% if spreads and spreads|length > 0 %}
+<div class="grid grid-cols-2 md:grid-cols-{{ spreads|length }} gap-3">
+    {% for s in spreads %}
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-3">
+        <div class="text-[10px] text-gray-500 uppercase tracking-wide">{{ s.label }} Spread</div>
+        <div class="text-lg font-mono font-semibold mt-0.5
+            {% if s.spread > 0 %}text-gain{% elif s.spread < 0 %}text-loss{% else %}text-gray-300{% endif %}">
+            {{ "{:+.0f}".format(s.spread * 100) }} bps
+        </div>
+        <div class="text-[10px] text-gray-600">{{ s.long }}% - {{ s.short }}%</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
+
+
+<div class="space-y-4">
+    <!-- ═══ Key Metrics Bar ═══ -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {% if spread_2s10s %}
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-3">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wide">2s10s Spread</div>
+            <div class="text-lg font-mono font-semibold mt-0.5
+                {% if spread_2s10s.spread > 0 %}text-gain{% elif spread_2s10s.spread < 0 %}text-loss{% else %}text-gray-300{% endif %}">
+                {{ "{:+.0f}".format(spread_2s10s.spread * 100) }} bps
+            </div>
+            <div class="text-[10px] text-gray-600">{{ spread_2s10s.long or spread_2s10s.ten_y }}% - {{ spread_2s10s.short or spread_2s10s.two_y }}%</div>
+        </div>
+        {% endif %}
+
+        {% if spread_3m10y %}
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-3">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wide">3M/10Y Spread</div>
+            <div class="text-lg font-mono font-semibold mt-0.5
+                {% if spread_3m10y.spread > 0 %}text-gain{% elif spread_3m10y.spread < 0 %}text-loss{% else %}text-gray-300{% endif %}">
+                {{ "{:+.0f}".format(spread_3m10y.spread * 100) }} bps
+            </div>
+            <div class="text-[10px] text-gray-600">{{ spread_3m10y.long }}% - {{ spread_3m10y.short }}%</div>
+        </div>
+        {% endif %}
+
+        {% if move %}
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-3">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wide">MOVE Index</div>
+            <div class="text-lg font-mono font-semibold mt-0.5
+                {% if move.value > 120 %}text-loss{% elif move.value > 100 %}text-amber-400{% else %}text-gray-200{% endif %}">
+                {{ move.value }}
+            </div>
+            {% if move.change_pct is not none %}
+            <div class="text-[10px] font-mono
+                {% if move.change_pct > 0 %}text-loss{% elif move.change_pct < 0 %}text-gain{% else %}text-gray-500{% endif %}">
+                {{ "{:+.2f}%".format(move.change_pct) }}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if real_rate %}
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-3">
+            {% if real_rate.breakeven is defined %}
+            <div class="text-[10px] text-gray-500 uppercase tracking-wide">10Y Real Rate</div>
+            <div class="text-lg font-mono font-semibold mt-0.5
+                {% if real_rate.value > 2 %}text-loss{% elif real_rate.value > 1 %}text-amber-400{% else %}text-gain{% endif %}">
+                {{ "{:.2f}%".format(real_rate.value) }}
+            </div>
+            <div class="text-[10px] text-gray-600">{{ real_rate.nominal }}% - {{ real_rate.breakeven }}% BE</div>
+            {% else %}
+            <div class="text-[10px] text-gray-500 uppercase tracking-wide">10Y-5Y Term Premium</div>
+            <div class="text-lg font-mono font-semibold mt-0.5 text-gray-200">
+                {{ "{:+.0f}".format(real_rate.term_premium * 100) }} bps
+            </div>
+            <div class="text-[10px] text-gray-600">{{ real_rate.ten_y }}% - {{ real_rate.five_y }}%</div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if spread_2s30s %}
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-3">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wide">2s30s Spread</div>
+            <div class="text-lg font-mono font-semibold mt-0.5
+                {% if spread_2s30s.spread > 0 %}text-gain{% elif spread_2s30s.spread < 0 %}text-loss{% else %}text-gray-300{% endif %}">
+                {{ "{:+.0f}".format(spread_2s30s.spread * 100) }} bps
+            </div>
+            <div class="text-[10px] text-gray-600">{{ spread_2s30s.long }}% - {{ spread_2s30s.short }}%</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- US TREASURIES                               -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {{ yield_table("US Treasury Yields", us_yields) }}
+        {{ curve_chart("us-yield-curve", "US Yield Curve", yield_curve, "#3b82f6") }}
+    </div>
+
+    {% if breakevens %}
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Breakeven Inflation Rates</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {% for item in breakevens %}
+            {% if item.value is not none %}
+            <div class="flex items-center justify-between p-3 rounded-md bg-gray-900/50 border border-gray-800/50">
+                <div>
+                    <div class="text-xs font-medium text-gray-200">{{ item.name }}</div>
+                    <div class="text-[10px] text-gray-500">Market implied inflation</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm font-mono font-semibold
+                        {% if item.value > 3 %}text-loss{% elif item.value > 2.5 %}text-amber-400{% else %}text-gray-200{% endif %}">
+                        {{ "{:.2f}%".format(item.value) }}
+                    </div>
+                    {% if item.change is not none %}
+                    <div class="text-[10px] font-mono
+                        {% if item.change > 0 %}text-loss{% elif item.change < 0 %}text-gain{% else %}text-gray-500{% endif %}">
+                        {{ "{:+.3f}".format(item.change) }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if credit_spreads %}
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Credit Spreads <span class="text-[10px] font-normal text-gray-500">(ICE BofA OAS, bps)</span></h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {% for item in credit_spreads %}
+            {% if item.value is not none %}
+            <div class="p-3 rounded-md bg-gray-900/50 border border-gray-800/50">
+                <div class="text-[10px] text-gray-500 uppercase tracking-wide">{{ item.name }}</div>
+                <div class="text-lg font-mono font-semibold mt-0.5
+                    {% if 'HY' in item.name or 'BB' in item.name %}
+                        {% if item.value > 500 %}text-loss{% elif item.value > 400 %}text-amber-400{% else %}text-gray-200{% endif %}
+                    {% else %}
+                        {% if item.value > 200 %}text-loss{% elif item.value > 150 %}text-amber-400{% else %}text-gray-200{% endif %}
+                    {% endif %}">
+                    {{ "{:.0f}".format(item.value * 100) }} bps
+                </div>
+                {% if item.change is not none %}
+                <div class="text-[10px] font-mono
+                    {% if item.change > 0 %}text-loss{% elif item.change < 0 %}text-gain{% else %}text-gray-500{% endif %}">
+                    {{ "{:+.0f}".format(item.change * 100) }} bps
+                </div>
+                {% endif %}
+                <div class="text-[10px] text-gray-600 mt-0.5">{{ item.desc }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        <div class="mt-2 text-[10px] text-gray-600">
+            Wider spreads = higher credit risk premium. IG >200bps or HY >500bps signals stress.
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- EURO AREA (ECB / Bund)                      -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {{ yield_table("Euro Area Yields (AAA Govt)", euro_yields) }}
+        {{ curve_chart("euro-yield-curve", "Euro Area Yield Curve", euro_curve, "#f59e0b") }}
+    </div>
+    {{ spread_cards(euro_spreads) }}
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- AUSTRALIA (RBA / ACGB)                      -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {{ yield_table("Australian Government Bond Yields", au_yields) }}
+        {{ curve_chart("au-yield-curve", "Australia Yield Curve", au_curve, "#22c55e") }}
+    </div>
+    {{ spread_cards(au_spreads) }}
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- UK (BoE / Gilts)                              -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {{ yield_table("UK Gilt Yields", uk_yields) }}
+        {{ curve_chart("uk-yield-curve", "UK Gilt Yield Curve", uk_curve, "#a855f7") }}
+    </div>
+    {{ spread_cards(uk_spreads) }}
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- JAPAN (BoJ / JGB)                           -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {{ yield_table("Japanese Government Bond Yields", jp_yields) }}
+        {{ curve_chart("jp-yield-curve", "Japan Yield Curve", jp_curve, "#ef4444") }}
+    </div>
+    {{ spread_cards(jp_spreads) }}
+
+    <div class="text-[10px] text-gray-600 text-right">
+        US: {{ data_source | default('yfinance') }} | Credit: ICE BofA/FRED | Euro: ECB | UK: BoE | Australia: RBA | Japan: MoF
+    </div>
+</div>

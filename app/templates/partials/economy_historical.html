@@ -1,0 +1,80 @@
+{% if charts %}
+<div class="space-y-4">
+    {% for chart in charts %}
+    {% if chart.series %}
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">{{ chart.indicator }}</h3>
+        <div id="econ-chart-{{ loop.index }}" style="height: 340px;"></div>
+        <script>
+        (function() {
+            var colorMap = {
+                "USA": "#3b82f6", "UK": "#ef4444", "Japan": "#f59e0b",
+                "Eurozone": "#8b5cf6", "Australia": "#22c55e",
+                "Canada": "#ec4899", "China": "#f97316"
+            };
+            var series = {{ chart.series | tojson }};
+            var traces = series.map(function(s) {
+                return {
+                    x: s.dates,
+                    y: s.values,
+                    name: s.country,
+                    type: "scatter",
+                    mode: "lines",
+                    line: { color: colorMap[s.country] || "#6b7280", width: 1.5 },
+                    hovertemplate: s.country + ": %{y:.2f}{% if '%' in chart.indicator %}%{% endif %}<extra></extra>"
+                };
+            });
+            var layout = {
+                paper_bgcolor: "transparent",
+                plot_bgcolor: "transparent",
+                font: { color: "#9ca3af", size: 10 },
+                margin: { l: 55, r: 15, t: 5, b: 40 },
+                xaxis: {
+                    showgrid: false,
+                    tickfont: { size: 9 },
+                    rangeselector: {
+                        buttons: [
+                            { count: 1, label: "1Y", step: "year", stepmode: "backward" },
+                            { count: 3, label: "3Y", step: "year", stepmode: "backward" },
+                            { count: 5, label: "5Y", step: "year", stepmode: "backward" },
+                            { step: "all", label: "All" },
+                        ],
+                        font: { size: 9, color: "#9ca3af" },
+                        bgcolor: "#1f2937",
+                        activecolor: "#3b82f6",
+                        x: 0, y: 1.08,
+                    },
+                },
+                yaxis: {
+                    gridcolor: "rgba(55,65,81,0.3)",
+                    tickfont: { size: 9 },
+                    zeroline: true,
+                    zerolinecolor: "rgba(107,114,128,0.4)",
+                    zerolinewidth: 1,
+                    {% if '%' in chart.indicator %}ticksuffix: "%",{% endif %}
+                },
+                legend: {
+                    orientation: "h",
+                    y: -0.18,
+                    x: 0.5,
+                    xanchor: "center",
+                    font: { size: 9 },
+                },
+                hovermode: "x unified",
+            };
+            Plotly.newPlot("econ-chart-{{ loop.index }}", traces, layout, {
+                displayModeBar: false,
+                responsive: true,
+            });
+        })();
+        </script>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+<div class="mt-2 text-[10px] text-gray-600">
+    Source: FRED (OECD harmonised series). Data from 2015 onward.
+</div>
+{% else %}
+<div class="text-sm text-gray-500 py-4">Loading historical data...</div>
+{% endif %}

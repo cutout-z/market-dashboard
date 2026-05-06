@@ -1,0 +1,58 @@
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+    <h3 class="text-sm font-semibold text-gray-300 mb-3">Clustered Correlation Matrix <span class="text-[10px] font-normal text-gray-500">(30-day rolling)</span></h3>
+
+    {% if correlations and correlations.labels %}
+    {% set labels = correlations.labels %}
+    {% set matrix = correlations.matrix %}
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+            <thead>
+                <tr>
+                    <th class="py-1.5 px-1 text-gray-500"></th>
+                    {% for label in labels %}
+                    <th class="py-1.5 px-1 text-center text-gray-400 font-semibold whitespace-nowrap"
+                        style="writing-mode: vertical-lr; transform: rotate(180deg); height: 60px;">
+                        {{ label }}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in range(labels|length) %}
+                <tr>
+                    <td class="py-1 px-1 text-gray-400 font-semibold whitespace-nowrap">{{ labels[i] }}</td>
+                    {% for j in range(labels|length) %}
+                    <td class="py-1 px-1 text-center">
+                        {% if matrix[i][j] is not none %}
+                        {% set val = matrix[i][j] %}
+                        {% set abs_val = val if val >= 0 else -val %}
+                        <div class="hm-cell rounded px-0.5 py-1 font-mono cursor-default"
+                             style="background: {% if i == j %}rgba(59, 130, 246, 0.2){% elif val > 0 %}rgba(34, 197, 94, {{ abs_val * 0.4 }}){% else %}rgba(239, 68, 68, {{ abs_val * 0.4 }}){% endif %};"
+                             title="{{ labels[i] }} / {{ labels[j] }}: {{ val }}">
+                            {% if i == j %}
+                            <span class="text-blue-400">1.0</span>
+                            {% else %}
+                            <span class="{% if val > 0.3 %}text-gain{% elif val < -0.3 %}text-loss{% else %}text-gray-400{% endif %}">
+                                {{ "{:.1f}".format(val) }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="rounded px-0.5 py-1 text-gray-600">—</div>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="mt-2 text-[10px] text-gray-600">
+        30-day rolling correlations, clustered by similarity. Adjacent assets are most correlated.
+        Watch for unusual clusters (e.g. Gold + DXY grouping = fear regime).
+    </div>
+    {% else %}
+    <div class="text-center text-gray-500 text-sm py-6">Loading correlation data...</div>
+    {% endif %}
+</div>

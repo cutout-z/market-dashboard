@@ -1,0 +1,151 @@
+<div class="space-y-6">
+
+    <!-- Task Complexity / Capability Milestones -->
+    {% if milestones %}
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Task Complexity Over Time</h3>
+        <div id="complexity-chart" style="height: 340px;"></div>
+        <script>
+        (function() {
+            var data = {{ milestones | tojson }};
+            var trace = {
+                x: data.map(function(d) { return d.date; }),
+                y: data.map(function(d) { return d.complexity; }),
+                text: data.map(function(d) { return d.event; }),
+                type: "scatter",
+                mode: "lines+markers",
+                line: { color: "#f59e0b", width: 2, shape: "spline" },
+                marker: { size: 8, color: "#f59e0b" },
+                hovertemplate: "%{text}<br>Complexity: %{y}<extra></extra>",
+            };
+            var layout = {
+                paper_bgcolor: "transparent",
+                plot_bgcolor: "transparent",
+                font: { color: "#9ca3af", size: 10 },
+                margin: { l: 45, r: 15, t: 10, b: 35 },
+                xaxis: { gridcolor: "rgba(55,65,81,0.5)", tickfont: { size: 9 } },
+                yaxis: {
+                    gridcolor: "rgba(55,65,81,0.5)",
+                    tickfont: { size: 9 },
+                    title: { text: "Capability Level", font: { size: 10 } },
+                    range: [0, 10],
+                },
+                hovermode: "closest",
+            };
+            Plotly.newPlot("complexity-chart", [trace], layout, { displayModeBar: false, responsive: true });
+        })();
+        </script>
+        <div class="mt-2 text-[10px] text-gray-600">
+            Qualitative capability progression — from few-shot learning to autonomous agents.
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Context Window Expansion -->
+    {% if context_windows %}
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Context Window Expansion</h3>
+        <div id="context-chart" style="height: 340px;"></div>
+        <script>
+        (function() {
+            var colorMap = {"OpenAI": "#10b981", "Anthropic": "#f59e0b", "Google": "#3b82f6"};
+            var data = {{ context_windows | tojson }};
+            var providers = {};
+            data.forEach(function(d) {
+                if (!providers[d.provider]) providers[d.provider] = { x: [], y: [], text: [] };
+                providers[d.provider].x.push(d.date);
+                providers[d.provider].y.push(d.tokens);
+                providers[d.provider].text.push(d.model);
+            });
+            var traces = Object.keys(providers).map(function(p) {
+                return {
+                    x: providers[p].x,
+                    y: providers[p].y,
+                    text: providers[p].text,
+                    name: p,
+                    type: "scatter",
+                    mode: "markers+lines",
+                    line: { color: colorMap[p] || "#6b7280", width: 1.5 },
+                    marker: { size: 8, color: colorMap[p] || "#6b7280" },
+                    hovertemplate: "%{text}<br>%{y:,.0f} tokens<extra>" + p + "</extra>",
+                    connectgaps: false,
+                };
+            });
+            var layout = {
+                paper_bgcolor: "transparent",
+                plot_bgcolor: "transparent",
+                font: { color: "#9ca3af", size: 10 },
+                margin: { l: 55, r: 15, t: 10, b: 35 },
+                xaxis: { gridcolor: "rgba(55,65,81,0.5)", tickfont: { size: 9 } },
+                yaxis: {
+                    gridcolor: "rgba(55,65,81,0.5)",
+                    tickfont: { size: 9 },
+                    type: "log",
+                    title: { text: "Context Window (tokens)", font: { size: 10 } },
+                },
+                legend: { orientation: "h", y: -0.15, x: 0.5, xanchor: "center", font: { size: 9 } },
+                hovermode: "closest",
+            };
+            Plotly.newPlot("context-chart", traces, layout, { displayModeBar: false, responsive: true });
+        })();
+        </script>
+        <div class="mt-2 text-[10px] text-gray-600">
+            Log scale. From 4K tokens (GPT-3) to 1M tokens (Gemini 1.5 / Claude Opus 4).
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Benchmark Performance Charts -->
+    {% if benchmarks %}
+    {% for bench_name, bench_data in benchmarks.items() %}
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-1">{{ bench_name }}</h3>
+        <div class="text-[10px] text-gray-500 mb-3">{{ bench_data.description }}</div>
+        <div id="bench-{{ loop.index }}" style="height: 300px;"></div>
+        <script>
+        (function() {
+            var colorMap = {"OpenAI": "#10b981", "Anthropic": "#f59e0b", "Google": "#3b82f6"};
+            var scores = {{ bench_data.scores | tojson }};
+            var providers = {};
+            scores.forEach(function(s) {
+                if (!providers[s.provider]) providers[s.provider] = { x: [], y: [], text: [] };
+                providers[s.provider].x.push(s.date);
+                providers[s.provider].y.push(s.score);
+                providers[s.provider].text.push(s.model);
+            });
+            var traces = Object.keys(providers).map(function(p) {
+                return {
+                    x: providers[p].x,
+                    y: providers[p].y,
+                    text: providers[p].text,
+                    name: p,
+                    type: "scatter",
+                    mode: "markers+lines",
+                    line: { color: colorMap[p] || "#6b7280", width: 1.5 },
+                    marker: { size: 7, color: colorMap[p] || "#6b7280" },
+                    hovertemplate: "%{text}: %{y:.1f}%<extra>" + p + "</extra>",
+                };
+            });
+            var layout = {
+                paper_bgcolor: "transparent",
+                plot_bgcolor: "transparent",
+                font: { color: "#9ca3af", size: 10 },
+                margin: { l: 45, r: 15, t: 10, b: 35 },
+                xaxis: { gridcolor: "rgba(55,65,81,0.5)", tickfont: { size: 9 } },
+                yaxis: {
+                    gridcolor: "rgba(55,65,81,0.5)",
+                    tickfont: { size: 9 },
+                    title: { text: "Score (%)", font: { size: 10 } },
+                    range: [0, {{ bench_data.max_score }}],
+                },
+                legend: { orientation: "h", y: -0.15, x: 0.5, xanchor: "center", font: { size: 9 } },
+                hovermode: "closest",
+            };
+            Plotly.newPlot("bench-{{ loop.index }}", traces, layout, { displayModeBar: false, responsive: true });
+        })();
+        </script>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+</div>

@@ -1,0 +1,60 @@
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-gray-300">VIX Term Structure</h3>
+        {% if vix_term.shape != "unknown" %}
+        <span class="text-[10px] font-semibold px-2 py-0.5 rounded
+            {% if vix_term.shape == 'backwardation' %}bg-loss/20 text-loss{% else %}bg-gain/20 text-gain{% endif %}">
+            {{ vix_term.shape | upper }}
+        </span>
+        {% endif %}
+    </div>
+
+    {% if vix_term.points %}
+    <div id="vix-term-chart" style="height: 220px;"></div>
+    <script>
+    (function() {
+        var points = {{ vix_term.points | tojson }};
+        var labels = [], values = [], colors = [];
+        var valid = points.filter(function(p) { return p.value !== null; });
+
+        valid.forEach(function(p) {
+            labels.push(p.label);
+            values.push(p.value);
+        });
+
+        var trace = {
+            x: labels,
+            y: values,
+            type: 'scatter',
+            mode: 'lines+markers',
+            line: { color: '{{ "#22c55e" if vix_term.shape == "contango" else "#ef4444" }}', width: 2.5 },
+            marker: { size: 8, color: '{{ "#22c55e" if vix_term.shape == "contango" else "#ef4444" }}' },
+            fill: 'tozeroy',
+            fillcolor: '{{ "rgba(34,197,94,0.08)" if vix_term.shape == "contango" else "rgba(239,68,68,0.08)" }}',
+            hovertemplate: '%{x}<br>%{y:.2f}<extra></extra>',
+        };
+
+        var layout = {
+            paper_bgcolor: 'transparent',
+            plot_bgcolor: 'transparent',
+            margin: { t: 10, r: 20, b: 40, l: 45 },
+            xaxis: { color: '#6b7280', gridcolor: 'rgba(55,65,81,0.3)', tickfont: { size: 10 } },
+            yaxis: { color: '#6b7280', gridcolor: 'rgba(55,65,81,0.3)', tickfont: { size: 10 }, title: { text: 'VIX Level', font: { size: 10, color: '#6b7280' } } },
+            font: { family: 'ui-monospace, monospace' },
+        };
+
+        Plotly.newPlot('vix-term-chart', [trace], layout, { responsive: true, displayModeBar: false });
+    })();
+    </script>
+
+    <div class="mt-2 text-[10px] text-gray-600">
+        {% if vix_term.shape == "backwardation" %}
+        Inverted curve — near-term fear exceeds long-term. Market pricing immediate risk.
+        {% else %}
+        Normal contango — near-term calm. Vol expected to rise over time (normal state).
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="text-center text-gray-500 text-sm py-6">Loading VIX term structure...</div>
+    {% endif %}
+</div>

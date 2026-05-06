@@ -1,0 +1,196 @@
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+    <h3 class="text-sm font-semibold text-gray-300 mb-3">Key Economic Indicators</h3>
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+            <thead>
+                <tr class="text-gray-500 border-b border-gray-800">
+                    <th class="text-left py-2 px-2 font-semibold sticky left-0 bg-surface">Country</th>
+                    {% for ind in indicators %}
+                    <th class="text-center py-2 px-2 font-semibold whitespace-nowrap">{{ ind }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr class="border-b border-gray-800/30 hover:bg-surface-light">
+                    <td class="py-2.5 px-2 font-medium text-gray-200 sticky left-0 bg-surface whitespace-nowrap">
+                        {{ row.country }}
+                    </td>
+                    {% for ind in indicators %}
+                    {% set val = row[ind] %}
+                    <td class="py-2.5 px-2 text-center font-mono">
+                        {% if val and val != '—' %}
+                        {% set numeric_val = val | replace('%', '') | replace('$', '') | replace('T', '') | float(default=none) %}
+                        {% if 'Rate' in ind or 'Inflation' in ind or 'Unemployment' in ind %}
+                            {# Color by relative level #}
+                            {% set nv = val | replace('%', '') | float(default=0) %}
+                            <span class="inline-block px-2 py-1 rounded"
+                                  style="background: {% if nv > 5 %}rgba(239, 68, 68, 0.2){% elif nv > 3 %}rgba(251, 191, 36, 0.15){% else %}rgba(34, 197, 94, 0.15){% endif %};">
+                                {{ val }}
+                            </span>
+                        {% elif 'Growth' in ind or 'Industrial' in ind %}
+                            {% set nv = val | replace('%', '') | float(default=0) %}
+                            <span class="inline-block px-2 py-1 rounded"
+                                  style="background: {% if nv > 3 %}rgba(34, 197, 94, 0.2){% elif nv > 0 %}rgba(34, 197, 94, 0.1){% elif nv > -2 %}rgba(251, 191, 36, 0.15){% else %}rgba(239, 68, 68, 0.2){% endif %};">
+                                {{ val }}
+                            </span>
+                        {% elif 'Budget' in ind or 'Current' in ind %}
+                            {% set nv = val | replace('%', '') | float(default=0) %}
+                            <span class="inline-block px-2 py-1 rounded"
+                                  style="background: {% if nv > 0 %}rgba(34, 197, 94, 0.15){% elif nv > -3 %}rgba(251, 191, 36, 0.1){% else %}rgba(239, 68, 68, 0.15){% endif %};">
+                                {{ val }}
+                            </span>
+                        {% elif 'Debt' in ind %}
+                            {% set nv = val | replace('%', '') | float(default=0) %}
+                            <span class="inline-block px-2 py-1 rounded"
+                                  style="background: {% if nv > 100 %}rgba(239, 68, 68, 0.2){% elif nv > 60 %}rgba(251, 191, 36, 0.15){% else %}rgba(34, 197, 94, 0.1){% endif %};">
+                                {{ val }}
+                            </span>
+                        {% else %}
+                            <span class="text-gray-300">{{ val }}</span>
+                        {% endif %}
+                        {% else %}
+                        <span class="text-gray-600">—</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="mt-3 text-[10px] text-gray-600">
+        CPI/Unemployment: FRED (monthly live). GDP/Fiscal: IMF WEO (annual). Other: reference estimates. Colors indicate relative levels.
+    </div>
+</div>
+
+<!-- Central Bank Policy Rates -->
+{% if cb_rates %}
+{% set valid_rates = [] %}
+{% for r in cb_rates %}{% if r.value is not none %}{% set _ = valid_rates.append(r) %}{% endif %}{% endfor %}
+{% if valid_rates %}
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4 mt-4">
+    <h3 class="text-sm font-semibold text-gray-300 mb-3">
+        Central Bank Policy Rates
+        <span class="text-[10px] font-normal text-blue-400 ml-2">FRED Live</span>
+    </h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {% for r in valid_rates %}
+        <div class="p-3 rounded-md bg-gray-900/50 border border-gray-800/50">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wide">{{ r.country }}</div>
+            <div class="text-lg font-mono font-semibold mt-0.5
+                {% if r.value > 5 %}text-loss{% elif r.value > 3 %}text-amber-400{% else %}text-gain{% endif %}">
+                {{ "{:.2f}%".format(r.value) }}
+            </div>
+            {% if r.change is not none %}
+            <div class="text-[10px] font-mono
+                {% if r.change > 0 %}text-loss{% elif r.change < 0 %}text-gain{% else %}text-gray-500{% endif %}">
+                {{ "{:+.2f}".format(r.change) }}
+            </div>
+            {% endif %}
+            <div class="text-[10px] text-gray-600 mt-0.5">{{ r.bank }} | {{ r.date }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="mt-2 text-[10px] text-gray-600">
+        Live central bank policy rates across major economies. Source: FRED.
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Inflation Nowcast -->
+{% if nowcasts %}
+{% set valid_nowcasts = [] %}
+{% for n in nowcasts %}{% if n.value is not none %}{% set _ = valid_nowcasts.append(n) %}{% endif %}{% endfor %}
+{% if valid_nowcasts %}
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4 mt-4">
+    <h3 class="text-sm font-semibold text-gray-300 mb-3">
+        Inflation Nowcast & Expectations
+        <span class="text-[10px] font-normal text-blue-400 ml-2">FRED Live</span>
+    </h3>
+
+    {% set nowcast_items = [] %}
+    {% set market_items = [] %}
+    {% set expectations_items = [] %}
+    {% for n in valid_nowcasts %}
+        {% if n.category == "nowcast" %}{% set _ = nowcast_items.append(n) %}
+        {% elif n.category == "market" %}{% set _ = market_items.append(n) %}
+        {% elif n.category == "expectations" %}{% set _ = expectations_items.append(n) %}
+        {% endif %}
+    {% endfor %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {% for n in valid_nowcasts %}
+        <div class="flex items-center justify-between p-3 rounded-md border border-gray-800/50
+            {% if n.category == 'nowcast' %}bg-blue-950/30{% elif n.category == 'market' %}bg-purple-950/30{% else %}bg-gray-900/50{% endif %}">
+            <div>
+                <div class="text-xs font-medium text-gray-200">{{ n.name }}</div>
+                <div class="text-[10px] text-gray-500">
+                    {{ n.category }} | {{ n.date }}
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-sm font-mono font-semibold
+                    {% if n.value > 3 %}text-loss{% elif n.value > 2.5 %}text-amber-400{% else %}text-gain{% endif %}">
+                    {{ "{:.2f}%".format(n.value) }}
+                </div>
+                {% if n.change is not none %}
+                <div class="text-[10px] font-mono
+                    {% if n.change > 0 %}text-loss{% elif n.change < 0 %}text-gain{% else %}text-gray-500{% endif %}">
+                    {{ "{:+.3f}".format(n.change) }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="mt-2 text-[10px] text-gray-600">
+        Nowcast = Cleveland Fed real-time estimates. Market = TIPS breakevens. Expectations = survey-based.
+        Rising readings → inflation pressure → hawkish Fed risk.
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Live US Economic Indicators from FRED -->
+{% if fred_indicators %}
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4 mt-4">
+    <h3 class="text-sm font-semibold text-gray-300 mb-3">
+        US Economic Indicators
+        <span class="text-[10px] font-normal text-blue-400 ml-2">FRED Live</span>
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {% for ind in fred_indicators %}
+        {% if ind.value is not none %}
+        <div class="flex items-center justify-between p-3 rounded-md bg-gray-900/50 border border-gray-800/50">
+            <div>
+                <div class="text-xs font-medium text-gray-200">{{ ind.name }}</div>
+                <div class="text-[10px] text-gray-500">
+                    {{ ind.category }} | {{ ind.date }}
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-sm font-mono font-semibold text-gray-100">
+                    {% if ind.unit == '%' %}{{ "{:.2f}%".format(ind.value) }}
+                    {% elif ind.unit == '$B' %}${{ "{:,.0f}B".format(ind.value) }}
+                    {% elif ind.unit == 'K' %}{{ "{:,.0f}K".format(ind.value) }}
+                    {% else %}{{ "{:,.1f}".format(ind.value) }}
+                    {% endif %}
+                </div>
+                {% if ind.change is not none %}
+                <div class="text-[10px] font-mono
+                    {% if ind.change > 0 %}text-gain{% elif ind.change < 0 %}text-loss{% else %}text-gray-500{% endif %}">
+                    {{ "{:+.2f}".format(ind.change) }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    <div class="mt-2 text-[10px] text-gray-600">
+        Source: Federal Reserve Economic Data (FRED). Values as of latest available date.
+    </div>
+</div>
+{% endif %}

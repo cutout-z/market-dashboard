@@ -1,0 +1,99 @@
+{% macro fmt_k(val) %}{% if val is not none %}{{ "{:+,.0f}".format(val / 1000) }}K{% else %}—{% endif %}{% endmacro %}
+
+<div class="space-y-4">
+    <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-300">Commitment of Traders (COT)</h3>
+        {% if report_date %}
+        <span class="text-[10px] text-gray-500">Report: {{ report_date }} | CFTC Weekly</span>
+        {% endif %}
+    </div>
+
+    {% if categories %}
+    {% for cat_name, items in categories.items() %}
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{{ cat_name }}</h4>
+        <div class="overflow-x-auto">
+            <table class="text-xs" style="table-layout: fixed; width: 100%;">
+                <colgroup>
+                    <col style="width: 170px;">
+                    <col style="width: 100px;">
+                    <col style="width: 80px;">
+                    <col style="width: 80px;">
+                    <col style="width: 70px;">
+                    <col style="width: 80px;">
+                    <col style="width: 110px;">
+                </colgroup>
+                <thead>
+                    <tr class="text-gray-500 border-b border-gray-800">
+                        <th class="text-left py-1.5">Contract</th>
+                        <th class="text-right py-1.5">Open Int.</th>
+                        <th class="text-right py-1.5">Spec Net</th>
+                        <th class="text-right py-1.5">Net Chg</th>
+                        <th class="text-right py-1.5">Net/OI</th>
+                        <th class="text-right py-1.5">Comm Net</th>
+                        <th class="text-right py-1.5 pr-1">Positioning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in items %}
+                    <tr class="border-b border-gray-800/30 hover:bg-surface-light">
+                        <td class="py-1.5 truncate">
+                            <span class="font-medium text-gray-200">{{ p.name }}</span>
+                            <span class="text-[10px] text-gray-600 ml-1">{{ p.symbol }}</span>
+                        </td>
+                        <td class="py-1.5 text-right font-mono text-gray-400">
+                            {% if p.open_interest is not none %}{{ "{:,.0f}".format(p.open_interest) }}{% else %}—{% endif %}
+                        </td>
+                        <td class="py-1.5 text-right font-mono font-semibold
+                            {% if p.noncomm_net is not none %}
+                                {% if p.noncomm_net > 0 %}text-gain{% elif p.noncomm_net < 0 %}text-loss{% else %}text-gray-400{% endif %}
+                            {% endif %}">
+                            {{ fmt_k(p.noncomm_net) }}
+                        </td>
+                        <td class="py-1.5 text-right font-mono
+                            {% if p.net_change is not none %}
+                                {% if p.net_change > 0 %}text-gain{% elif p.net_change < 0 %}text-loss{% else %}text-gray-500{% endif %}
+                            {% endif %}">
+                            {% if p.net_change is not none %}{{ "{:+,.0f}".format(p.net_change) }}{% else %}—{% endif %}
+                        </td>
+                        <td class="py-1.5 text-right font-mono
+                            {% if p.net_pct_oi is not none %}
+                                {% if p.net_pct_oi > 10 %}text-gain{% elif p.net_pct_oi < -10 %}text-loss{% else %}text-gray-400{% endif %}
+                            {% endif %}">
+                            {% if p.net_pct_oi is not none %}{{ "{:+.1f}%".format(p.net_pct_oi) }}{% else %}—{% endif %}
+                        </td>
+                        <td class="py-1.5 text-right font-mono text-gray-400">
+                            {{ fmt_k(p.comm_net) }}
+                        </td>
+                        <td class="py-1.5 pr-1">
+                            {% if p.net_pct_oi is not none %}
+                            {% set bar_pct = [p.net_pct_oi|abs * 2, 100]|min %}
+                            <div class="flex items-center justify-end gap-1">
+                                <span class="text-[10px] shrink-0 {% if p.net_pct_oi >= 0 %}text-gain{% else %}text-loss{% endif %}">
+                                    {% if p.net_pct_oi >= 0 %}Long{% else %}Short{% endif %}
+                                </span>
+                                <div class="w-14 h-2.5 bg-gray-800 rounded-sm overflow-hidden">
+                                    <div class="h-full rounded-sm {% if p.net_pct_oi >= 0 %}bg-gain/60{% else %}bg-loss/60{% endif %}"
+                                         style="width: {{ bar_pct }}%;"></div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="text-[10px] text-gray-600">
+        <strong>Spec Net</strong> = Non-commercial (speculative) long minus short positions.
+        <strong>Net/OI</strong> = Net as % of open interest — extreme readings (>20% or <-20%) may signal crowded positioning.
+        <strong>Comm Net</strong> = Commercial (hedger) positions — typically opposite to speculators.
+        Data: CFTC Commitment of Traders, released each Friday.
+    </div>
+    {% else %}
+    <div class="text-center text-gray-500 text-sm py-6">Loading COT positioning data...</div>
+    {% endif %}
+</div>

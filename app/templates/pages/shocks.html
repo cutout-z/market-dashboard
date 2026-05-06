@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Shock Analogs — Market Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-200">Historical Shock Analogs</h2>
+        <span class="text-xs text-gray-500">Pattern-match current conditions against {{ shock_count }} historical shocks</span>
+    </div>
+
+    <!-- Matcher form -->
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-4">Describe Current Shock</h3>
+        <form id="shock-form"
+              hx-get="/partials/shocks"
+              hx-target="#shock-results"
+              hx-swap="innerHTML"
+              hx-trigger="submit, load"
+              class="grid grid-cols-2 gap-4 md:grid-cols-4">
+
+            <div>
+                <label class="block text-[10px] text-gray-500 uppercase mb-1">Shock Type</label>
+                <select name="shock_type" class="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-sm text-gray-200 focus:border-blue-500 focus:outline-none">
+                    <option value="supply">Supply</option>
+                    <option value="demand">Demand</option>
+                    <option value="financial">Financial</option>
+                    <option value="policy">Policy</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[10px] text-gray-500 uppercase mb-1">Subtype (optional)</label>
+                <select name="shock_subtype" class="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-sm text-gray-200 focus:border-blue-500 focus:outline-none">
+                    <option value="">— Any —</option>
+                    <optgroup label="Supply">
+                        <option value="geopolitical_energy">Geopolitical / Energy</option>
+                        <option value="pandemic_supply">Pandemic Supply</option>
+                        <option value="trade_tariff">Trade / Tariff</option>
+                    </optgroup>
+                    <optgroup label="Demand">
+                        <option value="credit_systemic">Credit / Systemic</option>
+                        <option value="demand_collapse">Demand Collapse</option>
+                    </optgroup>
+                    <optgroup label="Financial">
+                        <option value="credit_systemic">Credit / Systemic</option>
+                        <option value="equity_valuation">Equity Valuation</option>
+                        <option value="sovereign_debt">Sovereign Debt</option>
+                    </optgroup>
+                    <optgroup label="Policy">
+                        <option value="monetary_tightening">Monetary Tightening</option>
+                        <option value="monetary_regime">Monetary Regime</option>
+                        <option value="fiscal_austerity">Fiscal Austerity</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[10px] text-gray-500 uppercase mb-1">Severity (1–5)</label>
+                <div class="flex items-center gap-2">
+                    <input type="range" name="severity" min="1" max="5" value="3"
+                           class="flex-1 accent-blue-500"
+                           oninput="document.getElementById('sev-val').textContent=this.value">
+                    <span id="sev-val" class="text-sm text-blue-400 font-mono w-4">3</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col justify-end">
+                <button type="submit"
+                        class="w-full px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded transition-colors">
+                    Find Analogs
+                </button>
+            </div>
+
+            <!-- Macro context row -->
+            <div class="col-span-2 md:col-span-4 flex flex-wrap gap-6 pt-2 border-t border-gray-800">
+                <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                    <input type="checkbox" name="cpi_elevated" value="true" class="accent-blue-500">
+                    CPI elevated (&gt;4%)
+                </label>
+                <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                    <input type="checkbox" name="economy_weakening" value="true" class="accent-blue-500">
+                    Economy weakening
+                </label>
+                <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                    <input type="checkbox" name="credit_spreads" value="true" class="accent-blue-500">
+                    Credit spreads widening
+                </label>
+            </div>
+        </form>
+    </div>
+
+    <!-- Analog results (HTMX target) -->
+    <div id="shock-results">
+        <div class="text-sm text-gray-500 py-4">Loading analogs...</div>
+    </div>
+
+    <!-- Full shock database table -->
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Full Shock Database</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs text-gray-300">
+                <thead>
+                    <tr class="text-[10px] text-gray-500 uppercase border-b border-gray-800">
+                        <th class="text-left pb-2 pr-4">Event</th>
+                        <th class="text-left pb-2 pr-4">Date</th>
+                        <th class="text-left pb-2 pr-4">Type</th>
+                        <th class="text-right pb-2 pr-4">Sev</th>
+                        <th class="text-right pb-2 pr-4">S&amp;P Trough</th>
+                        <th class="text-right pb-2 pr-4">Breakeven</th>
+                        <th class="text-left pb-2">Recovery</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800/50">
+                    {% for s in shocks %}
+                    <tr class="hover:bg-gray-800/30 transition-colors">
+                        <td class="py-2 pr-4 font-medium text-gray-200 whitespace-nowrap">{{ s.name }}</td>
+                        <td class="py-2 pr-4 text-gray-500 whitespace-nowrap">{{ s.date[:7] }}</td>
+                        <td class="py-2 pr-4">
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-medium
+                                {% if s.type == 'supply' %}bg-orange-900/40 text-orange-300
+                                {% elif s.type == 'demand' %}bg-blue-900/40 text-blue-300
+                                {% elif s.type == 'financial' %}bg-red-900/40 text-red-300
+                                {% else %}bg-purple-900/40 text-purple-300{% endif %}">
+                                {{ s.type }}
+                            </span>
+                        </td>
+                        <td class="py-2 pr-4 text-right font-mono">{{ s.severity }}/5</td>
+                        <td class="py-2 pr-4 text-right font-mono
+                            {% if s.sp500_trough_move_pct and s.sp500_trough_move_pct < -20 %}text-red-400
+                            {% elif s.sp500_trough_move_pct %}text-yellow-400
+                            {% else %}text-gray-600{% endif %}">
+                            {% if s.sp500_trough_move_pct %}{{ "%.1f"|format(s.sp500_trough_move_pct) }}%{% else %}—{% endif %}
+                        </td>
+                        <td class="py-2 pr-4 text-right font-mono text-gray-400">
+                            {% if s.sp500_breakeven_months %}{{ s.sp500_breakeven_months }}mo{% else %}—{% endif %}
+                        </td>
+                        <td class="py-2 text-gray-500">{{ s.recovery_shape or "—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-2 text-[10px] text-gray-600">
+            Pre-1990 returns are approximations — spot-check via FRED where precision is needed.
+        </div>
+    </div>
+</div>
+{% endblock %}

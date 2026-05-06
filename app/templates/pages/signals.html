@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Signals — Market Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-200">Autoresearch Signal Lab</h2>
+        <span class="text-xs text-gray-500">Karpathy-style iterative strategy optimization · Sharpe-scored</span>
+    </div>
+
+    <div id="signals-panel"
+         hx-get="/partials/signals"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <div class="text-sm text-gray-500 py-8 text-center">Loading signals...</div>
+    </div>
+</div>
+{% endblock %}

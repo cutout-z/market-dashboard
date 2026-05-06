@@ -1,0 +1,40 @@
+<h3 class="text-sm font-semibold text-gray-300 mb-3">News Feed</h3>
+
+{% if items %}
+<div class="space-y-1.5">
+    {% for item in items %}
+    <div class="p-2 rounded-md hover:bg-surface-light transition-colors group">
+        <div class="flex items-start gap-2">
+            <!-- Category badge -->
+            <span class="mt-0.5 inline-block w-1.5 h-1.5 rounded-full flex-shrink-0
+                {% if item.category == 'geopolitical' %}bg-red-500
+                {% elif item.category == 'macro' %}bg-amber-500
+                {% elif item.category == 'trade' %}bg-orange-500
+                {% elif item.category == 'earnings' %}bg-green-500
+                {% elif item.category == 'tech' %}bg-purple-500
+                {% elif item.category == 'energy' %}bg-yellow-500
+                {% elif item.category == 'crypto' %}bg-cyan-500
+                {% elif item.category == 'economic' %}bg-amber-500
+                {% else %}bg-blue-500{% endif %}">
+            </span>
+            <div class="min-w-0">
+                {% if item.url %}
+                <a href="{{ item.url }}" target="_blank" rel="noopener"
+                   class="text-xs text-gray-200 leading-snug hover:text-blue-400 line-clamp-2">
+                    {{ item.headline }}
+                </a>
+                {% else %}
+                <div class="text-xs text-gray-200 leading-snug line-clamp-2">{{ item.headline }}</div>
+                {% endif %}
+                <div class="flex items-center gap-2 mt-0.5">
+                    <span class="text-[10px] text-gray-500">{{ item.source }}</span>
+                    <span class="text-[10px] text-gray-600">{{ item.category }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-gray-500 text-sm py-6">No news available</div>
+{% endif %}

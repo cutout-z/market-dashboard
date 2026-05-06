@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+app/data/cache/
+.env
+logs/
+*.log
+data_quality/events.jsonl
+data_quality/findings.jsonl
+news_classification/findings.jsonl
+signals/findings.jsonl
+*.egg-info/
+dist/
+build/

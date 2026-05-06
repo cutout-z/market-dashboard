@@ -1,0 +1,70 @@
+{% set periods = ["24h", "1W", "1M", "3M", "1Y", "5Y", "10Y"] %}
+
+{% macro pct_cell(val) %}
+<td class="py-1 px-1 text-right font-mono text-[11px]
+    {% if val is not none %}
+        {% if val > 0 %}text-gain{% elif val < 0 %}text-loss{% else %}text-gray-500{% endif %}
+    {% endif %}">
+    {% if val is not none %}{{ "{:+.2f}%".format(val) }}{% else %}—{% endif %}
+</td>
+{% endmacro %}
+
+{% macro sparkline(values, width=48, height=16) %}
+{% if values and values|length > 1 %}
+{% set ns = namespace(min_v=values[0], max_v=values[0]) %}
+{% for v in values %}
+    {% if v < ns.min_v %}{% set ns.min_v = v %}{% endif %}
+    {% if v > ns.max_v %}{% set ns.max_v = v %}{% endif %}
+{% endfor %}
+{% set range_v = ns.max_v - ns.min_v if ns.max_v != ns.min_v else 1 %}
+{% set color = '#22c55e' if values[-1] >= values[0] else '#ef4444' %}
+<svg width="{{ width }}" height="{{ height }}" viewBox="0 0 {{ width }} {{ height }}" class="inline-block align-middle">
+    <polyline fill="none" stroke="{{ color }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+              points="{% for v in values %}{{ (loop.index0 / (values|length - 1) * (width - 2) + 1)|round(1) }},{{ ((1 - (v - ns.min_v) / range_v) * (height - 2) + 1)|round(1) }}{% if not loop.last %} {% endif %}{% endfor %}" />
+</svg>
+{% endif %}
+{% endmacro %}
+
+<div class="space-y-4">
+    {% for cat_name, items in categories.items() %}
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">{{ cat_name }}</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs table-fixed">
+                <colgroup>
+                    <col style="width: 140px">
+                    <col style="width: 52px">
+                    <col style="width: 90px">
+                    {% for p in periods %}
+                    <col style="width: 80px">
+                    {% endfor %}
+                </colgroup>
+                <thead>
+                    <tr class="text-gray-500 border-b border-gray-800">
+                        <th class="text-left py-1.5 pr-2 sticky left-0 bg-surface">Contract</th>
+                        <th class="py-1.5 px-1 text-[9px] text-gray-600">{{ spark_period | default('1W') }}</th>
+                        <th class="text-right py-1.5 px-1">Price</th>
+                        {% for p in periods %}
+                        <th class="text-right py-1.5 px-1">{{ p }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr class="border-b border-gray-800/30 hover:bg-surface-light">
+                        <td class="py-1 pr-2 text-gray-200 sticky left-0 bg-surface truncate">{{ item.name }}</td>
+                        <td class="py-1 px-1">{{ sparkline(item.sparklines[spark_period] if item.sparklines else item.sparkline) }}</td>
+                        <td class="py-1 px-1 text-right font-mono text-gray-300">
+                            {% if item.price is not none %}{{ item.price }}{% else %}—{% endif %}
+                        </td>
+                        {% for p in periods %}
+                        {{ pct_cell(item.returns[p] if item.returns else none) }}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>

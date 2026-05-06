@@ -1,0 +1,25 @@
+[Unit]
+Description=Market Dashboard + Autoresearch Worker
+Documentation=https://github.com/cutout-z/claude-code-projects
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/market/app/market-dashboard
+
+# Loads API keys into the service environment
+EnvironmentFile=/etc/market-dashboard/env
+
+ExecStart=/home/market/app/market-dashboard/deploy/start.sh
+ExecStop=/bin/bash -c 'cd /home/market/app/market-dashboard && docker compose down'
+
+Restart=on-failure
+RestartSec=30s
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

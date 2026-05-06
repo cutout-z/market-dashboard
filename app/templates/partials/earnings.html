@@ -1,0 +1,43 @@
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+    <h3 class="text-sm font-semibold text-gray-300 mb-3">Earnings Calendar <span class="text-[10px] font-normal text-gray-500">(next 2 weeks)</span></h3>
+
+    {% if events %}
+    {% set ns = namespace(current_date="") %}
+    <div class="space-y-1 max-h-[500px] overflow-y-auto">
+        {% for e in events %}
+        {% if e.date != ns.current_date %}
+        {% set ns.current_date = e.date %}
+        <div class="text-[10px] font-semibold text-gray-500 uppercase tracking-wide pt-2 pb-1 border-b border-gray-800/50 sticky top-0 bg-surface">
+            {{ e.date }}
+        </div>
+        {% endif %}
+        <div class="flex items-center justify-between py-1.5 px-1 hover:bg-surface-light rounded text-xs">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="font-mono font-semibold text-blue-400 w-12 shrink-0">{{ e.symbol }}</span>
+                <span class="text-gray-400 truncate">{{ e.company }}</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0 ml-2">
+                {% if e.timing %}
+                <span class="text-[10px] px-1.5 py-0.5 rounded
+                    {% if e.timing == 'BMO' %}bg-amber-900/30 text-amber-400
+                    {% elif e.timing == 'AMC' %}bg-blue-900/30 text-blue-400
+                    {% else %}bg-gray-800 text-gray-500{% endif %}">
+                    {{ e.timing }}
+                </span>
+                {% endif %}
+                {% if e.eps_estimate %}
+                <span class="font-mono text-gray-500" title="EPS Estimate">Est: {{ e.eps_estimate }}</span>
+                {% endif %}
+                {% if e.reported and e.eps_actual %}
+                <span class="font-mono font-semibold
+                    {% if e.eps_actual and e.eps_estimate and e.eps_actual > e.eps_estimate %}text-gain{% else %}text-loss{% endif %}"
+                    title="EPS Actual">{{ e.eps_actual }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center text-gray-500 text-sm py-6">Loading earnings calendar...</div>
+    {% endif %}
+</div>

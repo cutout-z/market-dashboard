@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Mag 7 & AI — Market Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-200">Mag 7 & AI Heavyweights</h2>
+        <span class="text-xs text-gray-500 htmx-indicator" id="mag7-loading">Updating...</span>
+    </div>
+
+    <div hx-get="/partials/mag7"
+         hx-trigger="load, every 120s"
+         hx-swap="innerHTML"
+         hx-indicator="#mag7-loading">
+        <div class="space-y-4">
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                <div class="skeleton h-6 w-48 rounded mb-4"></div>
+                <div class="space-y-2">
+                    {% for i in range(8) %}
+                    <div class="skeleton h-10 rounded"></div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                    <div class="skeleton h-64 rounded"></div>
+                </div>
+                <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                    <div class="skeleton h-64 rounded"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

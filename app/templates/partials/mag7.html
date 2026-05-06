@@ -1,0 +1,211 @@
+{% macro fmt_pct(val) %}
+{% if val is not none %}
+<span class="{% if val > 0 %}text-gain{% elif val < 0 %}text-loss{% else %}text-gray-500{% endif %}">
+    {{ "{:+.2f}%".format(val) }}
+</span>
+{% else %}—{% endif %}
+{% endmacro %}
+
+{% macro fmt_num(val, decimals=2) %}
+{% if val is not none %}{{ ("{:,." + decimals|string + "f}").format(val) }}{% else %}—{% endif %}
+{% endmacro %}
+
+{% macro fmt_cap(val) %}
+{% if val is not none %}
+{% if val >= 1e12 %}${{ "{:.2f}T".format(val / 1e12) }}{% elif val >= 1e9 %}${{ "{:.1f}B".format(val / 1e9) }}{% else %}${{ "{:,.0f}".format(val) }}{% endif %}
+{% else %}—{% endif %}
+{% endmacro %}
+
+{% set return_periods = ["1M", "6M", "1Y", "5Y", "10Y"] %}
+
+<div class="space-y-4">
+    <!-- ═══ Share Price Performance ═══ -->
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Share Price Performance</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+                <thead>
+                    <tr class="text-gray-500 border-b border-gray-800">
+                        <th class="text-left py-2 pr-2 sticky left-0 bg-surface">Stock</th>
+                        <th class="text-right py-2 px-2">Price</th>
+                        <th class="text-right py-2 px-2">24h</th>
+                        <th class="text-right py-2 px-2">YTD</th>
+                        {% for p in return_periods %}
+                        <th class="text-right py-2 px-2">{{ p }}</th>
+                        {% endfor %}
+                        <th class="text-right py-2 px-2">vs 52W Hi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in stocks %}
+                    <tr class="border-b border-gray-800/30 hover:bg-surface-light">
+                        <td class="py-2 pr-2 sticky left-0 bg-surface">
+                            <span class="font-medium text-gray-200">{{ s.name }}</span>
+                            <span class="text-[10px] text-gray-600 ml-1">{{ s.symbol }}</span>
+                        </td>
+                        <td class="py-2 px-2 text-right font-mono text-gray-300">
+                            {% if s.price is not none %}${{ fmt_num(s.price) }}{% else %}—{% endif %}
+                        </td>
+                        <td class="py-2 px-2 text-right font-mono">{{ fmt_pct(s.change_pct) }}</td>
+                        <td class="py-2 px-2 text-right font-mono">{{ fmt_pct(s.ytd_pct) }}</td>
+                        {% for p in return_periods %}
+                        <td class="py-2 px-2 text-right font-mono">{{ fmt_pct(s.returns[p] if s.returns and p in s.returns else none) }}</td>
+                        {% endfor %}
+                        <td class="py-2 px-2 text-right font-mono">{{ fmt_pct(s.pct_from_high) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ═══ Fundamentals ═══ -->
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Fundamentals</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+                <thead>
+                    <tr class="text-gray-500 border-b border-gray-800">
+                        <th class="text-left py-2 pr-2 sticky left-0 bg-surface">Stock</th>
+                        <th class="text-right py-2 px-2">Mkt Cap</th>
+                        <th class="text-right py-2 px-2">P/E</th>
+                        <th class="text-right py-2 px-2">Fwd P/E</th>
+                        <th class="text-right py-2 px-2">EPS</th>
+                        <th class="text-right py-2 px-2">Fwd EPS</th>
+                        <th class="text-right py-2 px-2">Rev YoY</th>
+                        <th class="text-right py-2 px-2">Capex YoY</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in stocks %}
+                    <tr class="border-b border-gray-800/30 hover:bg-surface-light">
+                        <td class="py-2 pr-2 sticky left-0 bg-surface">
+                            <span class="font-medium text-gray-200">{{ s.name }}</span>
+                            <span class="text-[10px] text-gray-600 ml-1">{{ s.symbol }}</span>
+                        </td>
+                        <td class="py-2 px-2 text-right font-mono text-gray-300">{{ fmt_cap(s.market_cap) }}</td>
+                        <td class="py-2 px-2 text-right font-mono text-gray-300">{{ fmt_num(s.pe_trailing) }}</td>
+                        <td class="py-2 px-2 text-right font-mono text-gray-300">{{ fmt_num(s.pe_forward) }}</td>
+                        <td class="py-2 px-2 text-right font-mono text-gray-300">
+                            {% if s.eps_trailing is not none %}${{ fmt_num(s.eps_trailing) }}{% else %}—{% endif %}
+                        </td>
+                        <td class="py-2 px-2 text-right font-mono text-gray-300">
+                            {% if s.eps_forward is not none %}${{ fmt_num(s.eps_forward) }}{% else %}—{% endif %}
+                        </td>
+                        <td class="py-2 px-2 text-right font-mono">{{ fmt_pct(s.rev_growth_yoy) }}</td>
+                        <td class="py-2 px-2 text-right font-mono">{{ fmt_pct(s.capex_yoy) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- ═══ Forward P/E Comparison ═══ -->
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+            <h3 class="text-sm font-semibold text-gray-300 mb-3">P/E Comparison</h3>
+            <div id="fwd-pe-chart" style="height: 320px;"></div>
+            <script>
+                (function() {
+                    var data = {{ stocks | tojson }};
+                    var sorted = data.filter(function(s) { return s.pe_forward != null; })
+                                     .sort(function(a, b) { return a.pe_forward - b.pe_forward; });
+
+                    var names = sorted.map(function(s) { return s.symbol; });
+                    var fwd = sorted.map(function(s) { return s.pe_forward; });
+                    var trail = sorted.map(function(s) { return s.pe_trailing; });
+
+                    Plotly.newPlot('fwd-pe-chart', [
+                        {
+                            y: names, x: trail, type: 'bar', orientation: 'h',
+                            name: 'Trailing P/E',
+                            marker: { color: 'rgba(107, 114, 128, 0.4)' },
+                            text: trail.map(function(v) { return v ? v.toFixed(1) + 'x' : ''; }),
+                            textposition: 'outside',
+                            textfont: { color: '#9ca3af', size: 10 },
+                        },
+                        {
+                            y: names, x: fwd, type: 'bar', orientation: 'h',
+                            name: 'Forward P/E',
+                            marker: { color: '#3b82f6', opacity: 0.85 },
+                            text: fwd.map(function(v) { return v ? v.toFixed(1) + 'x' : ''; }),
+                            textposition: 'outside',
+                            textfont: { color: '#e5e7eb', size: 10 },
+                        },
+                    ], {
+                        paper_bgcolor: 'transparent',
+                        plot_bgcolor: 'transparent',
+                        font: { color: '#9ca3af', size: 11 },
+                        margin: { t: 10, r: 60, b: 30, l: 60 },
+                        barmode: 'group',
+                        xaxis: { title: 'P/E Ratio', gridcolor: '#1f2937' },
+                        yaxis: { gridcolor: '#1f2937' },
+                        legend: { x: 0.7, y: 0.05, font: { size: 10 } },
+                        showlegend: true,
+                    }, { responsive: true, displayModeBar: false });
+                })();
+            </script>
+        </div>
+
+        <!-- ═══ Market Cap Treemap ═══ -->
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+            <h3 class="text-sm font-semibold text-gray-300 mb-3">Market Cap (colored by YTD)</h3>
+            <div id="mag7-treemap" style="height: 320px;"></div>
+            <script>
+                (function() {
+                    var data = {{ stocks | tojson }};
+                    var valid = data.filter(function(s) { return s.market_cap != null; });
+
+                    var labels = [], parents = [], values = [], colors = [], texts = [];
+                    valid.forEach(function(s) {
+                        labels.push(s.symbol);
+                        parents.push('');
+                        values.push(s.market_cap);
+                        var ytd = s.returns && s.returns.ytd != null ? s.returns.ytd : 0;
+                        colors.push(ytd);
+                        var ytdStr = ytd != 0 ? (ytd >= 0 ? '+' : '') + ytd.toFixed(1) + '%' : '';
+                        var cap = s.market_cap >= 1e12 ? '$' + (s.market_cap / 1e12).toFixed(2) + 'T' : '$' + (s.market_cap / 1e9).toFixed(0) + 'B';
+                        texts.push(cap + '<br>YTD: ' + ytdStr);
+                    });
+
+                    var maxAbs = Math.max.apply(null, colors.map(Math.abs)) || 1;
+                    var colorScale = colors.map(function(c) {
+                        var norm = c / maxAbs;
+                        if (norm >= 0) {
+                            var g = Math.round(80 + norm * 120);
+                            return 'rgb(30,' + g + ',60)';
+                        } else {
+                            var r = Math.round(80 + Math.abs(norm) * 150);
+                            return 'rgb(' + r + ',35,35)';
+                        }
+                    });
+
+                    Plotly.newPlot('mag7-treemap', [{
+                        type: 'treemap',
+                        labels: labels,
+                        parents: parents,
+                        values: values,
+                        text: texts,
+                        textinfo: 'label+text',
+                        textfont: { size: 13, color: '#e5e7eb' },
+                        marker: { colors: colorScale, line: { width: 1, color: '#1f2937' } },
+                        hovertemplate: '<b>%{label}</b><br>%{text}<extra></extra>',
+                    }], {
+                        paper_bgcolor: 'transparent',
+                        plot_bgcolor: 'transparent',
+                        margin: { t: 5, r: 5, b: 5, l: 5 },
+                        font: { family: 'ui-monospace, monospace', color: '#e5e7eb' },
+                    }, { responsive: true, displayModeBar: false });
+                })();
+            </script>
+            <div class="mt-2 text-[10px] text-gray-600">
+                Box size = market cap. Color = YTD performance (green = up, red = down).
+            </div>
+        </div>
+    </div>
+
+    <div class="text-[10px] text-gray-600 text-right">
+        Source: yfinance
+    </div>
+</div>

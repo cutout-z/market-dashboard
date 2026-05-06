@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Macro Pulse — Market Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-200">Macro Pulse</h2>
+        <span class="text-xs text-gray-500 htmx-indicator" id="pulse-loading">Updating...</span>
+    </div>
+
+    <!-- HUD + Ratios -->
+    <div hx-get="/partials/pulse-hud"
+         hx-trigger="load, every 60s"
+         hx-swap="innerHTML"
+         hx-indicator="#pulse-loading">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {% for i in range(10) %}
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-3">
+                <div class="skeleton h-4 w-16 rounded mb-2"></div>
+                <div class="skeleton h-6 w-20 rounded"></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- VIX Term Structure + Volatility Skew -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div hx-get="/partials/pulse-vix-term"
+             hx-trigger="load, every 60s"
+             hx-swap="innerHTML">
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                <div class="skeleton h-6 w-40 rounded mb-4"></div>
+                <div class="skeleton h-52 rounded"></div>
+            </div>
+        </div>
+
+        <div hx-get="/partials/vol-skew"
+             hx-trigger="load, every 300s"
+             hx-swap="innerHTML">
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                <div class="skeleton h-6 w-36 rounded mb-4"></div>
+                <div class="skeleton h-52 rounded"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fed Watch -->
+    <div hx-get="/partials/fedwatch"
+         hx-trigger="load, every 300s"
+         hx-swap="innerHTML">
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+            <div class="skeleton h-6 w-44 rounded mb-4"></div>
+            <div class="skeleton h-24 rounded"></div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Sector Rotation -->
+        <div hx-get="/partials/pulse-rotation"
+             hx-trigger="load, every 60s"
+             hx-swap="innerHTML">
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                <div class="skeleton h-6 w-40 rounded mb-4"></div>
+                <div class="space-y-2">
+                    {% for i in range(8) %}
+                    <div class="skeleton h-7 rounded"></div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Clustered Correlation Matrix -->
+        <div hx-get="/partials/pulse-correlations"
+             hx-trigger="load, every 60s"
+             hx-swap="innerHTML">
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                <div class="skeleton h-6 w-44 rounded mb-4"></div>
+                <div class="skeleton h-64 rounded"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

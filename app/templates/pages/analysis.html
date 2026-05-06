@@ -1,0 +1,545 @@
+{% extends "base.html" %}
+{% block title %}Analysis — Market Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-200">Historical Analysis</h2>
+        <div class="flex items-center gap-3">
+            <span class="text-[10px] text-gray-500" id="history-meta">
+                {% if history_meta %}{{ history_meta.symbol_count }} symbols · {{ history_meta.date_range.start }} to {{ history_meta.date_range.end }}{% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- Symbol selector + controls -->
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <div class="flex flex-wrap items-end gap-4">
+            <div>
+                <label class="block text-[10px] text-gray-500 uppercase mb-1">Symbol</label>
+                <select id="analysis-symbol" class="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:border-blue-500 focus:outline-none">
+                    {% for sym in symbols %}
+                    <option value="{{ sym }}" {% if sym == "^GSPC" %}selected{% endif %}>{{ sym }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] text-gray-500 uppercase mb-1">Period</label>
+                <div class="flex gap-1">
+                    {% for p in [("1Y", "1 Year"), ("5Y", "5 Year"), ("10Y", "10 Year"), ("MAX", "Max")] %}
+                    <button class="period-btn px-3 py-1.5 text-xs rounded border border-gray-700 hover:bg-surface-light
+                                   {% if p[0] == '10Y' %}bg-blue-600/20 border-blue-500/50 text-blue-400{% else %}text-gray-400{% endif %}"
+                            data-period="{{ p[0] }}" title="{{ p[1] }}">
+                        {{ p[0] }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            <div>
+                <label class="block text-[10px] text-gray-500 uppercase mb-1">Moving Averages</label>
+                <div class="flex gap-1">
+                    {% for ma in [("20", "#f59e0b"), ("50", "#3b82f6"), ("100", "#8b5cf6"), ("200", "#ef4444")] %}
+                    <button class="ma-btn px-2.5 py-1.5 text-xs rounded border border-gray-700 hover:bg-surface-light text-gray-400"
+                            data-period="{{ ma[0] }}" data-color="{{ ma[1] }}">
+                        {{ ma[0] }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            <div>
+                <label class="block text-[10px] text-gray-500 uppercase mb-1">MA Type</label>
+                <div class="flex gap-1">
+                    <button class="matype-btn px-3 py-1.5 text-xs rounded border border-gray-700 bg-blue-600/20 border-blue-500/50 text-blue-400"
+                            data-type="sma">SMA</button>
+                    <button class="matype-btn px-3 py-1.5 text-xs rounded border border-gray-700 text-gray-400"
+                            data-type="ema">EMA</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Price chart with MA overlays -->
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-300" id="price-chart-title">Price Chart</h3>
+            <span class="text-[10px] text-gray-500" id="price-chart-loading"></span>
+        </div>
+        <div id="price-chart" style="height: 380px;">
+            <div class="flex items-center justify-center h-full text-gray-500 text-sm">Loading chart...</div>
+        </div>
+    </div>
+
+    <!-- Drawdown chart -->
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-300">Drawdown from Peak</h3>
+            <span class="text-xs font-mono" id="max-dd-badge"></span>
+        </div>
+        <div id="drawdown-chart" style="height: 200px;">
+            <div class="flex items-center justify-center h-full text-gray-500 text-sm">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Rolling Volatility + Return Distribution -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-gray-300">Rolling Volatility</h3>
+                <div class="flex items-center gap-2">
+                    <select id="vol-window" class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200">
+                        <option value="10">10d</option>
+                        <option value="21" selected>21d</option>
+                        <option value="63">63d</option>
+                        <option value="252">252d</option>
+                    </select>
+                    <span class="text-xs font-mono" id="current-vol-badge"></span>
+                </div>
+            </div>
+            <div id="vol-chart" style="height: 200px;">
+                <div class="flex items-center justify-center h-full text-gray-500 text-sm">Loading...</div>
+            </div>
+        </div>
+
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-gray-300">Return Distribution</h3>
+                <span class="text-[10px] text-gray-500" id="dist-stats"></span>
+            </div>
+            <div id="dist-chart" style="height: 200px;">
+                <div class="flex items-center justify-center h-full text-gray-500 text-sm">Loading...</div>
+            </div>
+            <div class="mt-2 grid grid-cols-7 gap-1 text-center" id="percentile-bar"></div>
+        </div>
+    </div>
+
+    <!-- Correlation Matrix -->
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-300">Cross-Asset Correlation</h3>
+            <div class="flex items-center gap-3">
+                <label class="text-[10px] text-gray-500">LOOKBACK</label>
+                <select id="corr-lookback" class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200">
+                    <option value="30">30d</option>
+                    <option value="60">60d</option>
+                    <option value="90" selected>90d</option>
+                    <option value="180">180d</option>
+                    <option value="252">1Y</option>
+                </select>
+            </div>
+        </div>
+        <!-- Preset groups -->
+        <div class="flex flex-wrap gap-1 mb-3">
+            <button class="corr-preset px-2 py-1 text-[10px] rounded border border-gray-700 hover:bg-surface-light text-gray-400"
+                    data-symbols="^GSPC,^IXIC,^DJI,^RUT,^FTSE,^GDAXI,^N225,^AXJO">Major Indices</button>
+            <button class="corr-preset px-2 py-1 text-[10px] rounded border border-gray-700 hover:bg-surface-light text-gray-400"
+                    data-symbols="^GSPC,GC=F,CL=F,^TNX,DX-Y.NYB,^VIX,BTC-USD,HG=F">Macro Cross-Asset</button>
+            <button class="corr-preset px-2 py-1 text-[10px] rounded border border-gray-700 hover:bg-surface-light text-gray-400"
+                    data-symbols="AAPL,MSFT,GOOGL,AMZN,NVDA,META,TSLA,ORCL">Mag 7 + AI</button>
+            <button class="corr-preset px-2 py-1 text-[10px] rounded border border-gray-700 hover:bg-surface-light text-gray-400"
+                    data-symbols="XLK,XLF,XLE,XLV,XLI,XLU,XLY,XLP,XLB,XLRE,XLC">S&P Sectors</button>
+            <button class="corr-preset px-2 py-1 text-[10px] rounded border border-gray-700 hover:bg-surface-light text-gray-400"
+                    data-symbols="GC=F,SI=F,CL=F,NG=F,HG=F,ZW=F,ZC=F,ZS=F">Commodities</button>
+        </div>
+        <div id="corr-chart" style="height: 450px;">
+            <div class="flex items-center justify-center h-full text-gray-500 text-sm">Select a preset or symbol group above</div>
+        </div>
+        <div class="mt-2 text-[10px] text-gray-600" id="corr-note"></div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // ─── State ───
+    var state = {
+        symbol: '^GSPC',
+        period: '10Y',
+        maType: 'sma',
+        maPeriods: [],
+        maColors: {},
+        corrSymbols: '',
+        corrLookback: 90,
+    };
+
+    var periodStartMap = {
+        '1Y': 252, '5Y': 252 * 5, '10Y': 252 * 10, 'MAX': null
+    };
+
+    var plotlyLayout = {
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        font: { family: 'ui-monospace, monospace', color: '#9ca3af' },
+        margin: { t: 10, r: 20, b: 40, l: 60 },
+        xaxis: { gridcolor: 'rgba(55,65,81,0.3)', tickfont: { size: 10 } },
+        yaxis: { gridcolor: 'rgba(55,65,81,0.3)', tickfont: { size: 10 } },
+        legend: { font: { size: 10 }, bgcolor: 'transparent', x: 0, y: 1, xanchor: 'left' },
+    };
+
+    // ─── Price Chart ───
+    function loadPriceChart() {
+        var sym = state.symbol;
+        var maPeriods = state.maPeriods.length ? state.maPeriods.join(',') : '50,200';
+        var startDate = null;
+        if (state.period !== 'MAX') {
+            var daysBack = periodStartMap[state.period];
+            var d = new Date();
+            d.setDate(d.getDate() - Math.ceil(daysBack * 365 / 252));
+            startDate = d.toISOString().split('T')[0];
+        }
+        var url = '/api/history/' + encodeURIComponent(sym) + '/ma?periods=' + maPeriods + '&ma_type=' + state.maType;
+        if (startDate) url += '&start=' + startDate;
+
+        document.getElementById('price-chart-loading').textContent = 'Loading...';
+
+        fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+            document.getElementById('price-chart-loading').textContent = '';
+            if (data.error) {
+                document.getElementById('price-chart').innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 text-sm">' + data.error + '</div>';
+                return;
+            }
+
+            document.getElementById('price-chart-title').textContent = sym + ' — Price & Moving Averages';
+
+            var traces = [{
+                x: data.dates, y: data.close,
+                type: 'scatter', mode: 'lines',
+                name: 'Close', line: { color: '#e5e7eb', width: 1.5 },
+                hovertemplate: '%{x}<br>$%{y:,.2f}<extra>Close</extra>',
+            }];
+
+            var mas = data.moving_averages || {};
+            Object.keys(mas).forEach(function(key) {
+                var period = key.replace(/[A-Z]/g, '');
+                var color = state.maColors[period] || '#3b82f6';
+                traces.push({
+                    x: data.dates, y: mas[key],
+                    type: 'scatter', mode: 'lines',
+                    name: key, line: { color: color, width: 1.2, dash: 'dot' },
+                    hovertemplate: '%{x}<br>$%{y:,.2f}<extra>' + key + '</extra>',
+                    connectgaps: false,
+                });
+            });
+
+            var layout = Object.assign({}, plotlyLayout, {
+                yaxis: Object.assign({}, plotlyLayout.yaxis, {
+                    title: { text: 'Price', font: { size: 10, color: '#6b7280' } }
+                }),
+            });
+
+            Plotly.newPlot('price-chart', traces, layout, { responsive: true, displayModeBar: false });
+        });
+    }
+
+    // ─── Drawdown Chart ───
+    function loadDrawdown() {
+        var sym = state.symbol;
+        var startDate = null;
+        if (state.period !== 'MAX') {
+            var daysBack = periodStartMap[state.period];
+            var d = new Date();
+            d.setDate(d.getDate() - Math.ceil(daysBack * 365 / 252));
+            startDate = d.toISOString().split('T')[0];
+        }
+        var url = '/api/drawdown/' + encodeURIComponent(sym);
+        if (startDate) url += '?start=' + startDate;
+
+        fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.error) return;
+
+            var badge = document.getElementById('max-dd-badge');
+            if (data.max_drawdown !== null) {
+                var pct = (data.max_drawdown * 100).toFixed(1);
+                badge.textContent = 'Max: ' + pct + '% (' + data.max_drawdown_date + ')';
+                badge.className = 'text-xs font-mono text-loss';
+            } else {
+                badge.textContent = '';
+            }
+
+            var ddPct = data.drawdown.map(function(v) { return v * 100; });
+
+            var trace = {
+                x: data.dates, y: ddPct,
+                type: 'scatter', mode: 'lines',
+                line: { color: '#ef4444', width: 1 },
+                fill: 'tozeroy', fillcolor: 'rgba(239,68,68,0.12)',
+                hovertemplate: '%{x}<br>%{y:.1f}%<extra>Drawdown</extra>',
+            };
+
+            var layout = Object.assign({}, plotlyLayout, {
+                margin: { t: 5, r: 20, b: 30, l: 60 },
+                yaxis: Object.assign({}, plotlyLayout.yaxis, {
+                    title: { text: 'Drawdown %', font: { size: 10, color: '#6b7280' } },
+                    ticksuffix: '%',
+                }),
+                showlegend: false,
+            });
+
+            Plotly.newPlot('drawdown-chart', [trace], layout, { responsive: true, displayModeBar: false });
+        });
+    }
+
+    // ─── Rolling Volatility ───
+    function loadVolatility() {
+        var sym = state.symbol;
+        var window = parseInt(document.getElementById('vol-window').value);
+        var startDate = null;
+        if (state.period !== 'MAX') {
+            var daysBack = periodStartMap[state.period];
+            var d = new Date();
+            d.setDate(d.getDate() - Math.ceil(daysBack * 365 / 252));
+            startDate = d.toISOString().split('T')[0];
+        }
+        var url = '/api/volatility/' + encodeURIComponent(sym) + '?window=' + window;
+        if (startDate) url += '&start=' + startDate;
+
+        fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.error) return;
+
+            var badge = document.getElementById('current-vol-badge');
+            if (data.current_vol !== null) {
+                badge.textContent = data.current_vol.toFixed(1) + '% ann.';
+                badge.className = 'text-xs font-mono ' + (data.current_vol > 30 ? 'text-loss' : data.current_vol > 20 ? 'text-amber-400' : 'text-gray-400');
+            }
+
+            var trace = {
+                x: data.dates, y: data.volatility,
+                type: 'scatter', mode: 'lines',
+                line: { color: '#8b5cf6', width: 1.2 },
+                fill: 'tozeroy', fillcolor: 'rgba(139,92,246,0.1)',
+                hovertemplate: '%{x}<br>%{y:.1f}%<extra>Vol</extra>',
+                connectgaps: false,
+            };
+
+            var layout = Object.assign({}, plotlyLayout, {
+                margin: { t: 5, r: 20, b: 30, l: 50 },
+                yaxis: Object.assign({}, plotlyLayout.yaxis, {
+                    title: { text: 'Annualised Vol %', font: { size: 10, color: '#6b7280' } },
+                    ticksuffix: '%',
+                }),
+                showlegend: false,
+            });
+
+            Plotly.newPlot('vol-chart', [trace], layout, { responsive: true, displayModeBar: false });
+        });
+    }
+
+    // ─── Return Distribution ───
+    function loadDistribution() {
+        var sym = state.symbol;
+        var startDate = null;
+        if (state.period !== 'MAX') {
+            var daysBack = periodStartMap[state.period];
+            var d = new Date();
+            d.setDate(d.getDate() - Math.ceil(daysBack * 365 / 252));
+            startDate = d.toISOString().split('T')[0];
+        }
+        var url = '/api/returns-distribution/' + encodeURIComponent(sym);
+        if (startDate) url += '?start=' + startDate;
+
+        fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.error) return;
+
+            // Stats text
+            document.getElementById('dist-stats').textContent =
+                'Skew: ' + data.skew.toFixed(2) + ' | Kurt: ' + data.kurtosis.toFixed(2) + ' | n=' + data.total_days;
+
+            // Histogram
+            var midpoints = [];
+            for (var i = 0; i < data.hist_edges.length - 1; i++) {
+                midpoints.push((data.hist_edges[i] + data.hist_edges[i+1]) / 2);
+            }
+
+            var colors = midpoints.map(function(m) {
+                return m >= 0 ? 'rgba(34,197,94,0.6)' : 'rgba(239,68,68,0.6)';
+            });
+
+            var trace = {
+                x: midpoints, y: data.hist_counts,
+                type: 'bar',
+                marker: { color: colors },
+                hovertemplate: '%{x:.2f}%<br>%{y} days<extra></extra>',
+            };
+
+            var layout = Object.assign({}, plotlyLayout, {
+                margin: { t: 5, r: 20, b: 30, l: 45 },
+                xaxis: Object.assign({}, plotlyLayout.xaxis, {
+                    title: { text: 'Daily Return %', font: { size: 10, color: '#6b7280' } },
+                }),
+                yaxis: Object.assign({}, plotlyLayout.yaxis, {
+                    title: { text: 'Frequency', font: { size: 10, color: '#6b7280' } },
+                }),
+                bargap: 0.05,
+                showlegend: false,
+            });
+
+            Plotly.newPlot('dist-chart', [trace], layout, { responsive: true, displayModeBar: false });
+
+            // Percentile bar
+            var pctBar = document.getElementById('percentile-bar');
+            var pctiles = data.percentiles;
+            var html = '';
+            var keys = ['5', '10', '25', '50', '75', '90', '95'];
+            keys.forEach(function(k) {
+                var v = pctiles[k];
+                var color = v >= 0 ? 'text-gain' : 'text-loss';
+                html += '<div class="text-[10px]"><div class="text-gray-500">P' + k + '</div><div class="font-mono ' + color + '">' + v.toFixed(2) + '%</div></div>';
+            });
+            pctBar.innerHTML = html;
+        });
+    }
+
+    // ─── Correlation Heatmap ───
+    function loadCorrelation(symbols) {
+        if (!symbols) return;
+        state.corrSymbols = symbols;
+        var lookback = state.corrLookback;
+        var url = '/api/correlation?symbols=' + encodeURIComponent(symbols) + '&lookback=' + lookback;
+
+        fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.error) {
+                document.getElementById('corr-chart').innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 text-sm">' + data.error + '</div>';
+                return;
+            }
+
+            var labels = data.labels;
+            var matrix = data.matrix;
+
+            // Custom colorscale: red (-1) → gray (0) → green (+1)
+            var colorscale = [
+                [0, '#dc2626'], [0.25, '#991b1b'], [0.5, '#374151'], [0.75, '#166534'], [1, '#22c55e']
+            ];
+
+            var trace = {
+                z: matrix,
+                x: labels,
+                y: labels,
+                type: 'heatmap',
+                colorscale: colorscale,
+                zmin: -1, zmax: 1,
+                hovertemplate: '%{y} / %{x}<br>Corr: %{z:.3f}<extra></extra>',
+                colorbar: {
+                    tickfont: { size: 10, color: '#9ca3af' },
+                    len: 0.8,
+                },
+            };
+
+            // Add text annotations
+            var annotations = [];
+            for (var i = 0; i < labels.length; i++) {
+                for (var j = 0; j < labels.length; j++) {
+                    var val = matrix[i][j];
+                    annotations.push({
+                        x: labels[j], y: labels[i],
+                        text: val !== null ? val.toFixed(2) : '',
+                        font: { size: 9, color: Math.abs(val) > 0.5 ? '#ffffff' : '#9ca3af' },
+                        showarrow: false,
+                    });
+                }
+            }
+
+            var layout = Object.assign({}, plotlyLayout, {
+                margin: { t: 10, r: 80, b: 80, l: 80 },
+                xaxis: Object.assign({}, plotlyLayout.xaxis, { tickangle: -45 }),
+                annotations: annotations,
+            });
+
+            Plotly.newPlot('corr-chart', [trace], layout, { responsive: true, displayModeBar: false });
+            document.getElementById('corr-note').textContent = lookback + '-day rolling return correlations. Values near +1 = move together, near -1 = move inversely.';
+        });
+    }
+
+    // ─── Event Handlers ───
+
+    // Symbol selector
+    document.getElementById('analysis-symbol').addEventListener('change', function() {
+        state.symbol = this.value;
+        loadPriceChart();
+        loadDrawdown();
+        loadVolatility();
+        loadDistribution();
+    });
+
+    // Period buttons
+    document.querySelectorAll('.period-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.period-btn').forEach(function(b) {
+                b.classList.remove('bg-blue-600/20', 'border-blue-500/50', 'text-blue-400');
+                b.classList.add('text-gray-400');
+            });
+            this.classList.add('bg-blue-600/20', 'border-blue-500/50', 'text-blue-400');
+            this.classList.remove('text-gray-400');
+            state.period = this.dataset.period;
+            loadPriceChart();
+            loadDrawdown();
+            loadVolatility();
+            loadDistribution();
+        });
+    });
+
+    // MA toggle buttons
+    document.querySelectorAll('.ma-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var period = this.dataset.period;
+            var color = this.dataset.color;
+            var idx = state.maPeriods.indexOf(period);
+            if (idx >= 0) {
+                state.maPeriods.splice(idx, 1);
+                delete state.maColors[period];
+                this.classList.remove('bg-blue-600/20', 'border-blue-500/50', 'text-blue-400');
+                this.classList.add('text-gray-400');
+                this.style.borderColor = '';
+                this.style.color = '';
+            } else {
+                state.maPeriods.push(period);
+                state.maColors[period] = color;
+                this.classList.remove('text-gray-400');
+                this.style.borderColor = color;
+                this.style.color = color;
+            }
+            loadPriceChart();
+        });
+    });
+
+    // MA type toggle
+    document.querySelectorAll('.matype-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.matype-btn').forEach(function(b) {
+                b.classList.remove('bg-blue-600/20', 'border-blue-500/50', 'text-blue-400');
+                b.classList.add('text-gray-400');
+            });
+            this.classList.add('bg-blue-600/20', 'border-blue-500/50', 'text-blue-400');
+            this.classList.remove('text-gray-400');
+            state.maType = this.dataset.type;
+            loadPriceChart();
+        });
+    });
+
+    // Correlation presets
+    document.querySelectorAll('.corr-preset').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.corr-preset').forEach(function(b) {
+                b.classList.remove('bg-blue-600/20', 'border-blue-500/50', 'text-blue-400');
+            });
+            this.classList.add('bg-blue-600/20', 'border-blue-500/50', 'text-blue-400');
+            loadCorrelation(this.dataset.symbols);
+        });
+    });
+
+    // Correlation lookback
+    document.getElementById('corr-lookback').addEventListener('change', function() {
+        state.corrLookback = parseInt(this.value);
+        if (state.corrSymbols) loadCorrelation(state.corrSymbols);
+    });
+
+    // Vol window change
+    document.getElementById('vol-window').addEventListener('change', function() {
+        loadVolatility();
+    });
+
+    // ─── Initial Load ───
+    loadPriceChart();
+    loadDrawdown();
+    loadVolatility();
+    loadDistribution();
+})();
+</script>
+{% endblock %}

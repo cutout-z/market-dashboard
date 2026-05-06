@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}News — Market Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-200">News & Events</h2>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- News Feed (2/3 width) -->
+        <div class="lg:col-span-2 space-y-4">
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-4"
+                 hx-get="/partials/news-feed"
+                 hx-trigger="load, every 120s"
+                 hx-swap="innerHTML">
+                <div class="skeleton h-6 w-32 rounded mb-4"></div>
+                <div class="space-y-3">
+                    {% for i in range(10) %}
+                    <div class="skeleton h-10 rounded"></div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Polymarket -->
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-4"
+                 hx-get="/partials/polymarket"
+                 hx-trigger="load, every 120s"
+                 hx-swap="innerHTML">
+                <div class="skeleton h-6 w-40 rounded mb-4"></div>
+                <div class="space-y-3">
+                    {% for i in range(5) %}
+                    <div class="skeleton h-12 rounded"></div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right sidebar: Calendar + Earnings -->
+        <div class="space-y-4">
+            <!-- Economic Calendar -->
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-4"
+                 hx-get="/partials/calendar"
+                 hx-trigger="load, every 300s"
+                 hx-swap="innerHTML">
+                <div class="skeleton h-6 w-36 rounded mb-4"></div>
+                <div class="space-y-2">
+                    {% for i in range(8) %}
+                    <div class="skeleton h-6 rounded"></div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Earnings Calendar -->
+            <div hx-get="/partials/earnings"
+                 hx-trigger="load, every 3600s"
+                 hx-swap="innerHTML">
+                <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                    <div class="skeleton h-6 w-36 rounded mb-4"></div>
+                    <div class="space-y-2">
+                        {% for i in range(8) %}
+                        <div class="skeleton h-6 rounded"></div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

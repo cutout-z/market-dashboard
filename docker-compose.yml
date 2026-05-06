@@ -1,0 +1,25 @@
+services:
+  dashboard:
+    build: .
+    restart: unless-stopped
+    # Bind to localhost only — access via SSH tunnel: ssh -L 8060:localhost:8060 user@server
+    ports:
+      - "8060:8060"
+    environment:
+      - FRED_API_KEY=${FRED_API_KEY}
+      - FMP_API_KEY=${FMP_API_KEY}
+    volumes:
+      # Bind-mount the project directory so findings.jsonl and cache persist on the host
+      - .:/app
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: python worker.py
+    environment:
+      - FRED_API_KEY=${FRED_API_KEY}
+      - FMP_API_KEY=${FMP_API_KEY}
+    volumes:
+      - .:/app
+    depends_on:
+      - dashboard

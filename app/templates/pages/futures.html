@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Futures — Market Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <h2 class="text-lg font-semibold text-gray-200">Futures</h2>
+            <div class="flex items-center gap-1 spark-btns">
+                <span class="text-[10px] text-gray-600 mr-0.5">Spark</span>
+                {% for p in ["24h", "1W", "1M", "3M", "1Y", "5Y", "10Y"] %}
+                <button class="px-1.5 py-0.5 rounded text-[10px] border transition-colors
+                    {% if p == '1W' %}bg-blue-500/20 text-blue-400 border-blue-500/30{% else %}text-gray-500 border-gray-700 hover:text-gray-400 hover:border-gray-500{% endif %}"
+                    data-period="{{ p }}"
+                    onclick="setSparkPeriod(this, '{{ p }}', 'futures-content', '/partials/futures')">{{ p }}</button>
+                {% endfor %}
+            </div>
+        </div>
+        <span class="text-xs text-gray-500 htmx-indicator" id="futures-loading">Updating...</span>
+    </div>
+
+    <div id="futures-content"
+         hx-get="/partials/futures?spark_period=1W"
+         hx-trigger="load, every 60s"
+         hx-swap="innerHTML"
+         hx-indicator="#futures-loading">
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            {% for i in range(6) %}
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                <div class="skeleton h-6 w-32 rounded mb-4"></div>
+                <div class="space-y-2">
+                    {% for j in range(5) %}
+                    <div class="skeleton h-7 rounded"></div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

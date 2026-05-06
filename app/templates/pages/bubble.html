@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}AI Bubble Tracker — Market Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-200">AI Bubble Tracker</h2>
+        <span class="text-xs text-gray-500">Reference data — model capabilities & benchmarks</span>
+    </div>
+
+    <div hx-get="/partials/bubble"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <div class="space-y-6">
+            {% for i in range(3) %}
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                <div class="skeleton h-6 w-48 rounded mb-4"></div>
+                <div class="skeleton h-72 rounded"></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

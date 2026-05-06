@@ -1,0 +1,58 @@
+<h3 class="text-sm font-semibold text-gray-300 mb-3">Economic Calendar</h3>
+
+{% if error %}
+<div class="text-xs text-yellow-500/80 mb-2 p-2 rounded bg-yellow-500/5 border border-yellow-500/10">{{ error }}</div>
+{% endif %}
+
+{% if events %}
+{% set current_day = namespace(val='') %}
+<div class="space-y-0.5">
+    {% for event in events %}
+    {# Day separator #}
+    {% if event.day_label != current_day.val %}
+    {% set current_day.val = event.day_label %}
+    <div class="pt-2 pb-1 {% if not loop.first %}mt-2 border-t border-gray-800{% endif %}">
+        <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{{ event.day_label }}</span>
+    </div>
+    {% endif %}
+
+    <div class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-light
+                {% if event.is_past %}opacity-50{% endif %}">
+        {# Impact indicator #}
+        <span class="flex-shrink-0 w-2 h-2 rounded-full
+            {% if event.impact == 'High' %}bg-red-500
+            {% elif event.impact == 'Medium' %}bg-amber-500
+            {% elif event.impact == 'Low' %}bg-green-500
+            {% else %}bg-gray-600{% endif %}">
+        </span>
+
+        {# Time #}
+        <span class="text-[10px] font-mono text-gray-500 w-12 flex-shrink-0">{{ event.time }}</span>
+
+        {# Currency badge #}
+        <span class="text-[10px] font-semibold px-1 py-0.5 rounded bg-gray-800 text-gray-400 w-8 text-center flex-shrink-0">
+            {{ event.country[:3] }}
+        </span>
+
+        {# Event title #}
+        <span class="text-xs text-gray-200 flex-1 truncate">{{ event.title }}</span>
+
+        {# Forecast & Previous #}
+        <div class="flex items-center gap-2 flex-shrink-0 text-[10px]">
+            {% if event.forecast %}
+            <span class="text-gray-400">F: <span class="font-mono text-gray-300">{{ event.forecast }}</span></span>
+            {% endif %}
+            {% if event.previous %}
+            <span class="text-gray-500">P: <span class="font-mono">{{ event.previous }}</span></span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+<div class="mt-2 text-[10px] text-gray-600">
+    Source: ForexFactory | Times in ET | <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-500 align-middle"></span> High
+    <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 align-middle ml-1"></span> Medium
+</div>
+{% else %}
+<div class="text-center text-gray-500 text-sm py-6">No calendar events</div>
+{% endif %}

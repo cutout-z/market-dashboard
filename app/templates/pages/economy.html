@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Economy — Market Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-200">Economy</h2>
+        <span class="text-xs text-gray-500">Reference data + FRED live</span>
+    </div>
+
+    <div hx-get="/partials/economy"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+            <div class="skeleton h-6 w-48 rounded mb-4"></div>
+            <div class="space-y-2">
+                {% for i in range(10) %}
+                <div class="skeleton h-8 rounded"></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Historical Charts -->
+    <div>
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Historical Trends</h3>
+        <div hx-get="/partials/economy-historical"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="space-y-4">
+                {% for i in range(4) %}
+                <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                    <div class="skeleton h-6 w-48 rounded mb-4"></div>
+                    <div class="skeleton h-64 rounded"></div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

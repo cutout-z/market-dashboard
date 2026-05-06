@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Positioning — Market Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-200">Positioning</h2>
+        <span class="text-xs text-gray-500 htmx-indicator" id="cot-loading">Updating...</span>
+    </div>
+
+    <div hx-get="/partials/cot"
+         hx-trigger="load, every 3600s"
+         hx-swap="innerHTML"
+         hx-indicator="#cot-loading">
+        <div class="space-y-4">
+            {% for i in range(4) %}
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                <div class="skeleton h-5 w-24 rounded mb-3"></div>
+                <div class="space-y-2">
+                    {% for j in range(3) %}
+                    <div class="skeleton h-8 rounded"></div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

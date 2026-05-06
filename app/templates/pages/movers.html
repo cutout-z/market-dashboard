@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Market Movers — Market Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-200">Market Movers</h2>
+        <span class="text-xs text-gray-500 htmx-indicator" id="movers-loading">Updating...</span>
+    </div>
+
+    <div id="movers-panel"
+         hx-get="/partials/movers"
+         hx-trigger="load, every 300s"
+         hx-swap="innerHTML"
+         hx-indicator="#movers-loading">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {% for i in range(3) %}
+            <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+                <div class="skeleton h-6 w-28 rounded mb-4"></div>
+                <div class="space-y-2">
+                    {% for j in range(8) %}
+                    <div class="skeleton h-7 rounded"></div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

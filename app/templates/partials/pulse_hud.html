@@ -1,0 +1,182 @@
+<!-- HUD Tiles -->
+<div class="space-y-4">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {% for item in hud %}
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-3 hover:border-gray-700 transition-colors">
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-[10px] text-gray-500 uppercase tracking-wide">{{ item.name }}</span>
+                {% if item.change_pct is not none %}
+                <span class="text-[10px] font-mono
+                    {% if item.change_pct > 0 %}text-gain{% elif item.change_pct < 0 %}text-loss{% else %}text-gray-500{% endif %}">
+                    {{ "{:+.2f}%".format(item.change_pct) }}
+                </span>
+                {% endif %}
+            </div>
+            <div class="text-lg font-mono font-semibold text-gray-100">
+                {% if item.price is not none %}
+                {{ "{:,.2f}".format(item.price) }}
+                {% else %}
+                <span class="text-gray-600">—</span>
+                {% endif %}
+            </div>
+            <div class="text-[10px] text-gray-600 mt-0.5">{{ item.desc }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Key Spreads & Volatility -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {% if spread_2s10s %}
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-[10px] text-gray-500 uppercase tracking-wide">2s10s Spread</div>
+                    <div class="text-xl font-mono font-bold mt-1
+                        {% if spread_2s10s.spread < 0 %}text-loss{% elif spread_2s10s.spread > 0 %}text-gain{% else %}text-gray-300{% endif %}">
+                        {{ "{:+.0f}".format(spread_2s10s.spread * 100) }} bps
+                    </div>
+                </div>
+                <div class="text-right text-[10px] text-gray-500">
+                    <div>10Y: {{ spread_2s10s.ten_y }}%</div>
+                    <div>2Y: {{ spread_2s10s.two_y }}%</div>
+                </div>
+            </div>
+            <div class="text-[10px] text-gray-600 mt-1">
+                {% if spread_2s10s.spread < 0 %}Inverted — recession signal{% elif spread_2s10s.spread < 0.5 %}Flat — late cycle{% else %}Positive — normal{% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if move %}
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-[10px] text-gray-500 uppercase tracking-wide">MOVE Index</div>
+                    <div class="text-xl font-mono font-bold mt-1
+                        {% if move.value > 120 %}text-loss{% elif move.value > 100 %}text-amber-400{% else %}text-gray-200{% endif %}">
+                        {{ move.value }}
+                    </div>
+                </div>
+                {% if move.change_pct is not none %}
+                <div class="text-xs font-mono
+                    {% if move.change_pct > 0 %}text-loss{% elif move.change_pct < 0 %}text-gain{% else %}text-gray-500{% endif %}">
+                    {{ "{:+.2f}%".format(move.change_pct) }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="text-[10px] text-gray-600 mt-1">
+                {% if move.value > 120 %}Elevated — bond stress{% elif move.value > 100 %}Cautious{% else %}Calm{% endif %}
+                | Bond market vol (leads equity vol)
+            </div>
+        </div>
+        {% endif %}
+
+        {% if real_rate and real_rate.breakeven is defined %}
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-[10px] text-gray-500 uppercase tracking-wide">10Y Real Rate</div>
+                    <div class="text-xl font-mono font-bold mt-1
+                        {% if real_rate.value > 2 %}text-loss{% elif real_rate.value > 1 %}text-amber-400{% else %}text-gain{% endif %}">
+                        {{ "{:.2f}%".format(real_rate.value) }}
+                    </div>
+                </div>
+                <div class="text-right text-[10px] text-gray-500">
+                    <div>Nominal: {{ real_rate.nominal }}%</div>
+                    <div>BE: {{ real_rate.breakeven }}%</div>
+                </div>
+            </div>
+            <div class="text-[10px] text-gray-600 mt-1">
+                {% if real_rate.value > 2 %}High — headwind for risk assets{% elif real_rate.value > 1 %}Moderate{% else %}Accommodative{% endif %}
+                | 10Y yield - 10Y breakeven
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Credit Spreads -->
+    {% if credit_spreads %}
+    {% set ig = credit_spreads | selectattr("name", "equalto", "US IG OAS") | first %}
+    {% set hy = credit_spreads | selectattr("name", "equalto", "US HY OAS") | first %}
+    {% if ig or hy %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {% if ig and ig.value is not none %}
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-[10px] text-gray-500 uppercase tracking-wide">IG Credit Spread</div>
+                    <div class="text-xl font-mono font-bold mt-1
+                        {% if ig.value > 2 %}text-loss{% elif ig.value > 1.5 %}text-amber-400{% else %}text-gray-200{% endif %}">
+                        {{ "{:.0f}".format(ig.value * 100) }} bps
+                    </div>
+                </div>
+                {% if ig.change is not none %}
+                <div class="text-xs font-mono
+                    {% if ig.change > 0 %}text-loss{% elif ig.change < 0 %}text-gain{% else %}text-gray-500{% endif %}">
+                    {{ "{:+.0f}".format(ig.change * 100) }} bps
+                </div>
+                {% endif %}
+            </div>
+            <div class="text-[10px] text-gray-600 mt-1">
+                {% if ig.value > 2 %}Wide — credit stress{% elif ig.value > 1.5 %}Elevated{% else %}Tight — risk-on{% endif %}
+                | ICE BofA US IG OAS
+            </div>
+        </div>
+        {% endif %}
+        {% if hy and hy.value is not none %}
+        <div class="panel bg-surface rounded-lg border border-gray-800 p-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-[10px] text-gray-500 uppercase tracking-wide">HY Credit Spread</div>
+                    <div class="text-xl font-mono font-bold mt-1
+                        {% if hy.value > 5 %}text-loss{% elif hy.value > 4 %}text-amber-400{% else %}text-gray-200{% endif %}">
+                        {{ "{:.0f}".format(hy.value * 100) }} bps
+                    </div>
+                </div>
+                {% if hy.change is not none %}
+                <div class="text-xs font-mono
+                    {% if hy.change > 0 %}text-loss{% elif hy.change < 0 %}text-gain{% else %}text-gray-500{% endif %}">
+                    {{ "{:+.0f}".format(hy.change * 100) }} bps
+                </div>
+                {% endif %}
+            </div>
+            <div class="text-[10px] text-gray-600 mt-1">
+                {% if hy.value > 5 %}Wide — high yield stress{% elif hy.value > 4 %}Cautious{% else %}Tight — risk appetite{% endif %}
+                | ICE BofA US HY OAS
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- Commodity Ratios -->
+    {% if ratios %}
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Commodity Proxy Ratios</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {% for r in ratios %}
+            <div class="flex items-center justify-between p-3 rounded-md bg-gray-900/50 border border-gray-800/50">
+                <div>
+                    <div class="text-xs font-medium text-gray-200">{{ r.name }}</div>
+                    <div class="text-[10px] text-gray-500 mt-0.5">{{ r.desc }}</div>
+                </div>
+                <div class="text-right">
+                    {% if r.value is not none %}
+                    <div class="text-sm font-mono font-semibold text-gray-100">{{ r.value }}</div>
+                    {% if r.change_pct is not none %}
+                    <div class="text-[10px] font-mono
+                        {% if r.change_pct > 0 %}text-gain{% elif r.change_pct < 0 %}text-loss{% else %}text-gray-500{% endif %}">
+                        {{ "{:+.2f}%".format(r.change_pct) }}
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <span class="text-gray-600">—</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>

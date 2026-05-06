@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-gray-950 text-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Market Dashboard{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        surface: { DEFAULT: '#111827', light: '#1f2937' },
+                        gain: { DEFAULT: '#22c55e', muted: '#166534' },
+                        loss: { DEFAULT: '#ef4444', muted: '#991b1b' },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        /* HTMX loading */
+        .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+        .htmx-request .htmx-indicator { opacity: 1; }
+        .htmx-request.htmx-indicator { opacity: 1; }
+
+        /* Panel hover */
+        .panel { transition: border-color 0.2s ease; }
+        .panel:hover { border-color: #374151; }
+
+        /* Active nav */
+        .nav-item.active { background: #1f2937; border-left: 2px solid #3b82f6; }
+        .nav-item { border-left: 2px solid transparent; }
+
+        /* Heatmap cell */
+        .hm-cell { transition: transform 0.1s ease; }
+        .hm-cell:hover { transform: scale(1.05); z-index: 10; }
+
+        /* Loading skeleton */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+    </style>
+    <script>
+        function setSparkPeriod(btn, period, containerId, partialUrl) {
+            var container = document.getElementById(containerId);
+            var url = partialUrl + '?spark_period=' + period;
+            container.setAttribute('hx-get', url);
+            htmx.process(container);
+            htmx.ajax('GET', url, {target: '#' + containerId, swap: 'innerHTML'});
+            btn.closest('.spark-btns').querySelectorAll('button').forEach(function(b) {
+                if (b.dataset.period === period) {
+                    b.className = 'px-1.5 py-0.5 rounded text-[10px] border transition-colors bg-blue-500/20 text-blue-400 border-blue-500/30';
+                } else {
+                    b.className = 'px-1.5 py-0.5 rounded text-[10px] border transition-colors text-gray-500 border-gray-700 hover:text-gray-400 hover:border-gray-500';
+                }
+            });
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-gray-950 text-gray-100 antialiased flex">
+
+    <!-- Sidebar -->
+    <nav class="w-52 min-h-screen bg-surface border-r border-gray-800 flex flex-col fixed left-0 top-0 z-30">
+        <!-- Logo / Title -->
+        <div class="px-4 py-4 border-b border-gray-800">
+            <h1 class="text-sm font-bold text-gray-200 tracking-wide uppercase">Market Dashboard</h1>
+            <div class="text-[10px] text-gray-500 mt-1" id="clock"></div>
+        </div>
+
+        <!-- Vol Event Countdown -->
+        <div hx-get="/partials/vol-countdown"
+             hx-trigger="load, every 300s"
+             hx-swap="innerHTML">
+        </div>
+
+        <!-- Nav sections -->
+        <div class="flex-1 overflow-y-auto py-2">
+            {% set nav_sections = [
+                {"label": "Assets", "links": [
+                    {"path": "/indices", "label": "Indices"},
+                    {"path": "/futures", "label": "Futures"},
+                    {"path": "/commodities", "label": "Commodities"},
+                    {"path": "/forex", "label": "Forex"},
+                ]},
+                {"label": "Fixed Income", "links": [
+                    {"path": "/bonds", "label": "Bonds"},
+                ]},
+                {"label": "Macro", "links": [
+                    {"path": "/economy", "label": "Economy"},
+                    {"path": "/pulse", "label": "Macro Pulse"},
+                ]},
+                {"label": "Markets", "links": [
+                    {"path": "/mag7", "label": "Mag 7 & AI"},
+                    {"path": "/movers", "label": "Movers"},
+                ]},
+                {"label": "News & Events", "links": [
+                    {"path": "/news", "label": "News"},
+                ]},
+                {"label": "Analysis", "links": [
+                    {"path": "/analysis", "label": "Historical"},
+                    {"path": "/positioning", "label": "Positioning (COT)"},
+                    {"path": "/shocks", "label": "Shock Analogs"},
+                    {"path": "/signals", "label": "Signals"},
+                ]},
+            ] %}
+
+            {% for section in nav_sections %}
+            <div class="mb-1">
+                <div class="px-4 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                    {{ section.label }}
+                </div>
+                {% for item in section.links %}
+                <a href="{{ item.path }}"
+                   class="nav-item block px-4 py-2 text-sm text-gray-300 hover:bg-surface-light hover:text-white
+                          {% if request.url.path == item.path or (item.path == '/indices' and request.url.path == '/') %}active{% endif %}">
+                    {{ item.label }}
+                </a>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Footer -->
+        <div class="px-4 py-3 border-t border-gray-800 text-[10px] text-gray-600">
+            <a href="/api/sources" class="hover:text-gray-400">Source Health</a>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="ml-52 flex-1 min-h-screen">
+        <div class="max-w-[1600px] mx-auto px-6 py-5">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script>
+        function updateClock() {
+            const el = document.getElementById('clock');
+            if (el) {
+                const now = new Date();
+                el.textContent = now.toLocaleString('en-AU', {
+                    weekday: 'short', day: 'numeric', month: 'short',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                });
+            }
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>

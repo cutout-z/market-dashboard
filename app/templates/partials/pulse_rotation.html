@@ -1,0 +1,55 @@
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+    <h3 class="text-sm font-semibold text-gray-300 mb-3">Sector Rotation vs S&P 500</h3>
+
+    {% if rotation %}
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-xs text-gray-500 border-b border-gray-800">
+                <th class="text-left py-2">Sector</th>
+                <th class="text-right py-2">1M Abs</th>
+                <th class="text-right py-2">1M RS</th>
+                <th class="text-right py-2">3M RS</th>
+                <th class="text-right py-2 pl-3">Signal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in rotation | sort(attribute='rs_1m', reverse=true) if s.rs_1m is not none %}
+            <tr class="border-b border-gray-800/30 hover:bg-surface-light">
+                <td class="py-2">
+                    <span class="text-gray-200">{{ s.name }}</span>
+                    <span class="text-[10px] text-gray-500 ml-1">{{ s.symbol }}</span>
+                </td>
+                <td class="py-2 text-right font-mono text-xs
+                    {% if s.abs_1m is not none %}{% if s.abs_1m > 0 %}text-gain{% elif s.abs_1m < 0 %}text-loss{% else %}text-gray-400{% endif %}{% endif %}">
+                    {% if s.abs_1m is not none %}{{ "{:+.2f}%".format(s.abs_1m) }}{% else %}—{% endif %}
+                </td>
+                <td class="py-2 text-right font-mono text-xs font-medium
+                    {% if s.rs_1m > 0 %}text-gain{% elif s.rs_1m < 0 %}text-loss{% else %}text-gray-400{% endif %}">
+                    {{ "{:+.2f}%".format(s.rs_1m) }}
+                </td>
+                <td class="py-2 text-right font-mono text-xs
+                    {% if s.rs_3m is not none %}{% if s.rs_3m > 0 %}text-gain{% elif s.rs_3m < 0 %}text-loss{% else %}text-gray-400{% endif %}{% endif %}">
+                    {% if s.rs_3m is not none %}{{ "{:+.2f}%".format(s.rs_3m) }}{% else %}—{% endif %}
+                </td>
+                <td class="py-2 text-right pl-3">
+                    {% if s.rs_1m is not none and s.rs_3m is not none %}
+                        {% if s.rs_1m > 0 and s.rs_3m > 0 %}
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-gain/10 text-gain">Leading</span>
+                        {% elif s.rs_1m > 0 and s.rs_3m <= 0 %}
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">Improving</span>
+                        {% elif s.rs_1m <= 0 and s.rs_3m > 0 %}
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400">Weakening</span>
+                        {% else %}
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-loss/10 text-loss">Lagging</span>
+                        {% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="mt-2 text-[10px] text-gray-600">RS = Relative Strength vs SPY. Positive = outperforming the index.</div>
+    {% else %}
+    <div class="text-center text-gray-500 text-sm py-6">Loading rotation data...</div>
+    {% endif %}
+</div>

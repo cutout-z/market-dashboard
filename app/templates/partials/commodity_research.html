@@ -1,0 +1,222 @@
+{% set sections = data.get("sections", {}) %}
+
+{# ── Header ── #}
+<div class="sticky top-0 z-10 bg-gray-950 border-b border-gray-800 px-5 py-3 flex items-start justify-between">
+    <div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-sm font-semibold text-gray-100">{{ data.get("name", symbol) }}</span>
+            <span class="text-[10px] font-mono text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">{{ symbol }}</span>
+            <span class="text-[10px] text-blue-400 border border-blue-900 px-1.5 py-0.5 rounded">{{ data.get("category", "") }}</span>
+        </div>
+        <div class="text-[10px] text-gray-500 mt-0.5">{{ data.get("benchmark", "") }}</div>
+    </div>
+    <button onclick="document.getElementById('commodity-panel').innerHTML=''"
+            class="text-gray-600 hover:text-gray-300 transition-colors text-lg leading-none ml-3 mt-0.5 flex-shrink-0"
+            title="Close">✕</button>
+</div>
+
+{# ── Drivers strip ── #}
+{% if data.get("drivers") %}
+<div class="px-5 py-2.5 bg-gray-900/50 border-b border-gray-800/50">
+    <span class="text-[9px] text-gray-600 uppercase tracking-wider">Key drivers</span>
+    <p class="text-[11px] text-gray-400 mt-0.5">{{ data.get("drivers") }}</p>
+</div>
+{% endif %}
+
+{% if data.get("populated") %}
+
+{# ── Overview ── #}
+{% if sections.get("Overview") %}
+<div class="px-5 py-3 border-b border-gray-800/50">
+    <h4 class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Overview</h4>
+    <p class="text-[11px] text-gray-300 leading-relaxed">{{ sections["Overview"] | join(" ") }}</p>
+</div>
+{% endif %}
+
+{# ── Pricing Mechanism ── #}
+{% if sections.get("Pricing Mechanism") %}
+<div class="px-5 py-3 border-b border-gray-800/50">
+    <h4 class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Pricing Mechanism</h4>
+    <p class="text-[11px] text-gray-300 leading-relaxed">{{ sections["Pricing Mechanism"][:3] | join(" ") }}</p>
+</div>
+{% endif %}
+
+{# ── Key Producers ── #}
+{% if sections.get("Key Producers by Country") %}
+<div class="px-5 py-3 border-b border-gray-800/50">
+    <h4 class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Key Producers</h4>
+    <div class="text-[11px] text-gray-300 space-y-0.5">
+        {% for line in sections["Key Producers by Country"] %}
+        {% if line.startswith("|") and not line.startswith("| Country") and not line.startswith("|---") %}
+        {% set cells = line.strip("|").split("|") %}
+        {% if cells|length >= 2 %}
+        <div class="flex justify-between gap-2">
+            <span class="text-gray-400">{{ cells[0].strip() }}</span>
+            <span class="text-gray-200 font-mono">{{ cells[1].strip() }}</span>
+            {% if cells|length >= 3 and cells[2].strip() %}
+            <span class="text-gray-600 text-[10px] truncate flex-1 text-right">{{ cells[2].strip() }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# ── End-Use Breakdown ── #}
+{% if sections.get("Demand Drivers & End-Use Breakdown") %}
+<div class="px-5 py-3 border-b border-gray-800/50">
+    <h4 class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">End-Use Breakdown</h4>
+    <div class="text-[11px] text-gray-300 space-y-0.5">
+        {% for line in sections["Demand Drivers & End-Use Breakdown"] %}
+        {% if line.startswith("|") and not line.startswith("| Sector") and not line.startswith("|---") %}
+        {% set cells = line.strip("|").split("|") %}
+        {% if cells|length >= 2 %}
+        <div class="flex justify-between gap-2">
+            <span class="text-gray-400">{{ cells[0].strip() }}</span>
+            <span class="text-gray-200 font-mono">{{ cells[1].strip() }}</span>
+            {% if cells|length >= 3 and cells[2].strip() %}
+            <span class="text-[10px] {% if 'Growing' in cells[2] or '↑' in cells[2] %}text-green-500{% elif 'Declining' in cells[2] or '↓' in cells[2] %}text-red-500{% else %}text-gray-600{% endif %}">{{ cells[2].strip() }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# ── Historical Shocks ── #}
+{% if sections.get("Historical Supply/Demand Shocks") %}
+<div class="px-5 py-3 border-b border-gray-800/50">
+    <h4 class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Historical Shocks</h4>
+    <div class="text-[11px] text-gray-300 space-y-1">
+        {% set shock_rows = [] %}
+        {% for line in sections["Historical Supply/Demand Shocks"] %}
+        {% if line.startswith("|") and not line.startswith("| Date") and not line.startswith("|---") %}
+        {% set _ = shock_rows.append(line) %}
+        {% endif %}
+        {% endfor %}
+        {% for line in shock_rows[-5:] %}
+        {% set cells = line.strip("|").split("|") %}
+        {% if cells|length >= 2 %}
+        <div>
+            <span class="text-gray-600 font-mono text-[10px]">{{ cells[0].strip() }}</span>
+            <span class="text-gray-400 ml-1">{{ cells[1].strip() }}</span>
+            {% if cells|length >= 3 and cells[2].strip() %}
+            <span class="text-[10px] {% if '+' in cells[2] %}text-green-500{% elif '-' in cells[2] %}text-red-400{% else %}text-gray-500{% endif %} ml-1">{{ cells[2].strip() }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# ── Key Catalysts ── #}
+{% if sections.get("Key Price Catalysts") %}
+<div class="px-5 py-3 border-b border-gray-800/50">
+    <h4 class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Key Price Catalysts</h4>
+    <ul class="text-[11px] text-gray-300 space-y-0.5">
+        {% for line in sections["Key Price Catalysts"] %}
+        {% if line.strip().startswith("-") or line.strip().startswith("*") %}
+        <li class="flex gap-1.5"><span class="text-gray-600 flex-shrink-0">·</span>{{ line.lstrip("-* ") }}</li>
+        {% elif line.strip() and not line.startswith("|") %}
+        <li class="flex gap-1.5"><span class="text-gray-600 flex-shrink-0">·</span>{{ line.strip() }}</li>
+        {% endif %}
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{# ── Macro Correlations ── #}
+{% if sections.get("Macro Correlations") %}
+<div class="px-5 py-3 border-b border-gray-800/50">
+    <h4 class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Macro Correlations</h4>
+    <div class="text-[11px] text-gray-300 space-y-0.5">
+        {% for line in sections["Macro Correlations"] %}
+        {% if line.startswith("|") and not line.startswith("| Factor") and not line.startswith("|---") %}
+        {% set cells = line.strip("|").split("|") %}
+        {% if cells|length >= 2 %}
+        <div class="flex gap-2">
+            <span class="text-gray-500 w-28 flex-shrink-0">{{ cells[0].strip() }}</span>
+            <span class="text-gray-300">{{ cells[1].strip() }}</span>
+        </div>
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# ── Key Reports ── #}
+{% if sections.get("Key Reports & Publications") %}
+<div class="px-5 py-3 border-b border-gray-800/50">
+    <h4 class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Key Reports to Watch</h4>
+    <div class="text-[11px] text-gray-300 space-y-0.5">
+        {% for line in sections["Key Reports & Publications"] %}
+        {% if line.startswith("|") and not line.startswith("| Publication") and not line.startswith("|---") %}
+        {% set cells = line.strip("|").split("|") %}
+        {% if cells|length >= 2 %}
+        <div class="flex justify-between gap-2">
+            <span class="text-gray-400">{{ cells[0].strip() }}</span>
+            <span class="text-gray-600 text-[10px]">{{ cells[1].strip() }}</span>
+        </div>
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# ── Seasonality ── #}
+{% if sections.get("Seasonality Pattern") %}
+<div class="px-5 py-3 border-b border-gray-800/50">
+    <h4 class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Seasonality</h4>
+    <p class="text-[11px] text-gray-300 leading-relaxed">{{ sections["Seasonality Pattern"][:3] | join(" ") }}</p>
+</div>
+{% endif %}
+
+{# ── Investment Vehicles ── #}
+{% if sections.get("Investment Vehicles") %}
+<div class="px-5 py-3 border-b border-gray-800/50">
+    <h4 class="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Investment Vehicles</h4>
+    <div class="text-[11px] text-gray-300 space-y-0.5">
+        {% for line in sections["Investment Vehicles"] %}
+        {% if line.startswith("|") and not line.startswith("| Vehicle") and not line.startswith("|---") %}
+        {% set cells = line.strip("|").split("|") %}
+        {% if cells|length >= 2 %}
+        <div class="flex gap-2">
+            <span class="text-gray-200 font-mono text-[10px] w-20 flex-shrink-0">{{ cells[0].strip() }}</span>
+            <span class="text-gray-500 text-[10px] w-16 flex-shrink-0">{{ cells[1].strip() }}</span>
+            {% if cells|length >= 3 %}<span class="text-gray-400 truncate">{{ cells[2].strip() }}</span>{% endif %}
+        </div>
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+{# ── Not populated ── #}
+<div class="px-5 py-8 text-center">
+    <p class="text-[11px] text-gray-600">Research note not yet populated.</p>
+    <p class="text-[10px] text-gray-700 mt-1">Open in Obsidian to add content.</p>
+</div>
+{% endif %}
+
+{# ── Footer ── #}
+<div class="px-5 py-4 sticky bottom-0 bg-gray-950 border-t border-gray-800">
+    <a href="{{ obsidian_uri }}"
+       class="flex items-center justify-center gap-1.5 w-full py-2 rounded
+              bg-gray-800 hover:bg-gray-700 text-[11px] text-gray-300
+              hover:text-gray-100 transition-colors">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+        </svg>
+        Open in Obsidian
+    </a>
+</div>

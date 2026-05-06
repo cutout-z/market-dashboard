@@ -1,0 +1,78 @@
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+            <thead>
+                <tr class="text-gray-500 border-b border-gray-800">
+                    <th class="text-left py-2 pr-4 font-medium">Source</th>
+                    <th class="text-right py-2 px-3 font-medium">Interval</th>
+                    <th class="text-right py-2 px-3 font-medium">Age</th>
+                    <th class="text-center py-2 px-3 font-medium">Status</th>
+                    <th class="text-right py-2 px-3 font-medium">Coverage</th>
+                    <th class="text-right py-2 px-3 font-medium">Score</th>
+                    <th class="text-right py-2 px-3 font-medium">P95</th>
+                    <th class="text-right py-2 pl-3 font-medium">Success</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr class="border-b border-gray-800/30 hover:bg-surface-light"
+                    {% if row.error %}title="{{ row.error }}"{% endif %}>
+                    <td class="py-1.5 pr-4 font-mono text-gray-300">{{ row.name }}</td>
+                    <td class="py-1.5 px-3 text-right text-gray-500">{{ row.interval_str }}</td>
+                    <td class="py-1.5 px-3 text-right font-mono
+                        {% if row.status == 'fresh' %}text-gain
+                        {% elif row.status in ('stale', 'very-stale') %}text-amber-500
+                        {% else %}text-gray-500{% endif %}">
+                        {{ row.age_str }}
+                    </td>
+                    <td class="py-1.5 px-3 text-center">
+                        {% if row.status == 'fresh' %}
+                        <span class="inline-block text-[10px] font-semibold text-gain bg-gain/10 rounded px-1.5 py-0.5">FRESH</span>
+                        {% elif row.status == 'stale' %}
+                        <span class="inline-block text-[10px] font-semibold text-amber-500 bg-amber-500/10 rounded px-1.5 py-0.5">STALE</span>
+                        {% elif row.status == 'very-stale' %}
+                        <span class="inline-block text-[10px] font-semibold text-loss bg-loss/10 rounded px-1.5 py-0.5">STALE+</span>
+                        {% elif row.status == 'error' %}
+                        <span class="inline-block text-[10px] font-semibold text-loss bg-loss/10 rounded px-1.5 py-0.5" title="{{ row.error }}">ERROR</span>
+                        {% else %}
+                        <span class="inline-block text-[10px] text-gray-600 bg-gray-800 rounded px-1.5 py-0.5">NO DATA</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-1.5 px-3 text-right text-gray-500">{{ row.coverage }}</td>
+                    <td class="py-1.5 px-3 text-right font-mono
+                        {% if row.reliability is not none %}
+                            {% if row.reliability >= 95 %}text-gain
+                            {% elif row.reliability >= 80 %}text-blue-400
+                            {% elif row.reliability >= 60 %}text-amber-400
+                            {% else %}text-loss{% endif %}
+                        {% else %}text-gray-600{% endif %}">
+                        {% if row.reliability is not none %}{{ "%.0f"|format(row.reliability) }}{% else %}—{% endif %}
+                    </td>
+                    <td class="py-1.5 px-3 text-right font-mono
+                        {% if row.p95_ms is not none %}
+                            {% if row.p95_ms < 2000 %}text-gain
+                            {% elif row.p95_ms < 10000 %}text-amber-400
+                            {% else %}text-loss{% endif %}
+                        {% else %}text-gray-600{% endif %}">
+                        {% if row.p95_ms is not none %}{{ "%.0f"|format(row.p95_ms) }}ms{% else %}—{% endif %}
+                    </td>
+                    <td class="py-1.5 pl-3 text-right font-mono
+                        {% if row.success_rate is not none %}
+                            {% if row.success_rate >= 0.99 %}text-gain
+                            {% elif row.success_rate >= 0.9 %}text-amber-400
+                            {% else %}text-loss{% endif %}
+                        {% else %}text-gray-600{% endif %}">
+                        {% if row.success_rate is not none %}{{ "%.0f"|format(row.success_rate * 100) }}%{% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="mt-3 flex items-center justify-between text-[10px] text-gray-600">
+        <span>Status: FRESH = within interval · STALE = 1-2x interval · STALE+ = >2x interval · Coverage = symbols with non-null price</span>
+        {% if total_events %}
+        <span>{{ total_events }} telemetry events collected</span>
+        {% endif %}
+    </div>
+</div>

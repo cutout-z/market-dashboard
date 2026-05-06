@@ -1,0 +1,71 @@
+{% macro movers_table(title, items, color_class, vol_unit) %}
+<div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+    <h3 class="text-sm font-semibold {{ color_class }} mb-3">{{ title }}</h3>
+    {% if items %}
+    <table class="w-full text-xs">
+        <thead>
+            <tr class="text-gray-500 border-b border-gray-800">
+                <th class="text-left py-1.5">Symbol</th>
+                <th class="text-right py-1.5">Price</th>
+                <th class="text-right py-1.5">% Chg</th>
+                <th class="text-right py-1.5">Vol</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr class="border-b border-gray-800/30 hover:bg-surface-light">
+                <td class="py-1.5">
+                    <div class="font-medium text-gray-200">{{ item.symbol }}</div>
+                    <div class="text-[10px] text-gray-500 truncate max-w-[120px]">{{ item.name }}</div>
+                </td>
+                <td class="py-1.5 text-right font-mono text-gray-300">
+                    {% if item.price %}{{ "{:.2f}".format(item.price) }}{% else %}—{% endif %}
+                </td>
+                <td class="py-1.5 text-right font-mono font-medium
+                    {% if color_class == 'text-gain' %}text-gain
+                    {% elif color_class == 'text-loss' %}text-loss
+                    {% else %}
+                        {% if item.change_pct is not none %}
+                            {% if item.change_pct > 0 %}text-gain{% elif item.change_pct < 0 %}text-loss{% else %}text-gray-400{% endif %}
+                        {% endif %}
+                    {% endif %}">
+                    {% if item.change_pct is not none %}{{ "{:+.2f}%".format(item.change_pct) }}{% else %}—{% endif %}
+                </td>
+                <td class="py-1.5 text-right font-mono text-gray-500">
+                    {% if item.volume %}
+                        {% if vol_unit == 'M' %}{{ "{:,.1f}M".format(item.volume / 1000000) }}
+                        {% else %}{{ "{:,.0f}K".format(item.volume / 1000) }}
+                        {% endif %}
+                    {% else %}—{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="text-center text-gray-500 text-sm py-4">No data</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<!-- Region tabs -->
+<div class="flex gap-2 mb-4 flex-wrap">
+    {% for key, meta in regions.items() %}
+    <button class="px-3 py-1.5 text-xs rounded-md border transition-colors
+        {% if key == region %}bg-blue-600/20 border-blue-500/50 text-blue-400
+        {% else %}bg-surface border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200{% endif %}"
+        hx-get="/partials/movers?region={{ key }}"
+        hx-target="#movers-content"
+        hx-swap="innerHTML">
+        {{ meta.name }}
+    </button>
+    {% endfor %}
+</div>
+
+<div id="movers-content">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {{ movers_table("Top Gainers", gainers, "text-gain", "K") }}
+        {{ movers_table("Top Losers", losers, "text-loss", "K") }}
+        {{ movers_table("Most Active", active, "text-blue-400", "M") }}
+    </div>
+</div>

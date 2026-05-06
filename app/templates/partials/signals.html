@@ -1,0 +1,151 @@
+<div class="space-y-6">
+
+    <!-- Active Signal State -->
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-4">Current Signal State</h3>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {% for s in signal_states %}
+            <div class="bg-gray-900 rounded-lg border
+                {% if s.signal == 1 %}border-green-800/60{% elif s.signal == 0 %}border-yellow-800/60{% else %}border-red-800/60{% endif %}
+                p-4">
+                <div class="flex items-start justify-between mb-3">
+                    <div>
+                        <div class="text-sm font-semibold text-gray-200">{{ s.name }}</div>
+                        <div class="text-[10px] text-gray-500 mt-0.5">{{ s.version }}</div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded text-xs font-bold tracking-wide
+                        {% if s.signal == 1 %}bg-green-900/50 text-green-400{% elif s.signal == 0 %}bg-yellow-900/50 text-yellow-400{% else %}bg-red-900/50 text-red-400{% endif %}">
+                        {{ s.label }}
+                    </span>
+                </div>
+                <div class="text-[10px] text-gray-500">As of {{ s.date }}</div>
+                <div class="mt-2 pt-2 border-t border-gray-800">
+                    <div class="text-[10px] text-gray-600 font-mono leading-relaxed">
+                        {% for k, v in s.params.items() %}
+                        <span class="text-gray-500">{{ k }}</span>=<span class="text-gray-400">{{ v }}</span>{% if not loop.last %} &nbsp;{% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-300">Leaderboard — Best per Strategy</h3>
+            <span class="text-[10px] text-gray-600">{{ total_runs }} total evaluation runs</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs text-gray-300">
+                <thead>
+                    <tr class="text-[10px] text-gray-500 uppercase border-b border-gray-800">
+                        <th class="text-left pb-2 pr-4">Strategy</th>
+                        <th class="text-right pb-2 pr-3">Sharpe</th>
+                        <th class="text-right pb-2 pr-3">B&H Sharpe</th>
+                        <th class="text-right pb-2 pr-3">CAGR</th>
+                        <th class="text-right pb-2 pr-3">Hit Rate</th>
+                        <th class="text-right pb-2 pr-3">Max DD</th>
+                        <th class="text-right pb-2 pr-3">Trades</th>
+                        <th class="text-right pb-2">Period</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800/50">
+                    {% for name, e in leaderboard.items()|sort(attribute='1.sharpe', reverse=true) %}
+                    {% set beats_bh = e.sharpe > e.bh_sharpe %}
+                    <tr class="hover:bg-gray-800/30 transition-colors">
+                        <td class="py-2 pr-4">
+                            <div class="font-medium text-gray-200">{{ name }}</div>
+                            <div class="text-[10px] text-gray-600">{{ e.metadata.version }}</div>
+                        </td>
+                        <td class="py-2 pr-3 text-right font-mono
+                            {% if beats_bh %}text-green-400{% else %}text-gray-300{% endif %}">
+                            {{ "%.3f"|format(e.sharpe) }}
+                            {% if beats_bh %}<span class="text-[9px] text-green-600 ml-0.5">▲BH</span>{% endif %}
+                        </td>
+                        <td class="py-2 pr-3 text-right font-mono text-gray-500">{{ "%.3f"|format(e.bh_sharpe) }}</td>
+                        <td class="py-2 pr-3 text-right font-mono text-gray-300">{{ "%.1f"|format(e.cagr * 100) }}%</td>
+                        <td class="py-2 pr-3 text-right font-mono text-gray-400">{{ "%.1f"|format(e.hit_rate * 100) }}%</td>
+                        <td class="py-2 pr-3 text-right font-mono
+                            {% if e.max_drawdown < -0.3 %}text-red-400{% elif e.max_drawdown < -0.2 %}text-yellow-400{% else %}text-gray-400{% endif %}">
+                            {{ "%.1f"|format(e.max_drawdown * 100) }}%
+                        </td>
+                        <td class="py-2 pr-3 text-right font-mono text-gray-500">{{ e.trade_count }}</td>
+                        <td class="py-2 text-right text-gray-600 whitespace-nowrap">
+                            {{ e.eval_period.start[:7] }}→{{ e.eval_period.end[:7] }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Mutation surface reference -->
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Mutation Surface</h3>
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div>
+                <div class="text-xs font-medium text-gray-400 mb-2">RiskOffComposite</div>
+                <table class="w-full text-xs text-gray-400">
+                    <thead>
+                        <tr class="text-[10px] text-gray-600 uppercase border-b border-gray-800">
+                            <th class="text-left pb-1.5 pr-3">Param</th>
+                            <th class="text-right pb-1.5 pr-3">Default</th>
+                            <th class="text-left pb-1.5">Explore</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800/30">
+                        {% set roc_surface = [
+                            ("vix_threshold", "17.0", "15–30"),
+                            ("copper_gold_lookback", "5", "3–15"),
+                            ("copper_gold_change", "-0.05", "-0.01 to -0.07"),
+                            ("dxy_breakout_days", "20", "5–30"),
+                            ("conditions_required", "2", "1–4"),
+                            ("hold_days", "1", "1–10"),
+                        ] %}
+                        {% for param, default, explore in roc_surface %}
+                        <tr>
+                            <td class="py-1 pr-3 font-mono text-gray-400">{{ param }}</td>
+                            <td class="py-1 pr-3 text-right font-mono text-blue-400">{{ default }}</td>
+                            <td class="py-1 text-gray-600">{{ explore }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <div class="text-xs font-medium text-gray-400 mb-2">VIXTermStructure</div>
+                <table class="w-full text-xs text-gray-400">
+                    <thead>
+                        <tr class="text-[10px] text-gray-600 uppercase border-b border-gray-800">
+                            <th class="text-left pb-1.5 pr-3">Param</th>
+                            <th class="text-right pb-1.5 pr-3">Default</th>
+                            <th class="text-left pb-1.5">Explore</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800/30">
+                        {% set vts_surface = [
+                            ("vix_floor", "20.0", "12–25"),
+                            ("hold_days", "3", "1–10"),
+                        ] %}
+                        {% for param, default, explore in vts_surface %}
+                        <tr>
+                            <td class="py-1 pr-3 font-mono text-gray-400">{{ param }}</td>
+                            <td class="py-1 pr-3 text-right font-mono text-blue-400">{{ default }}</td>
+                            <td class="py-1 text-gray-600">{{ explore }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="mt-4 pt-3 border-t border-gray-800">
+                    <div class="text-[10px] text-gray-600 font-mono">
+                        python -m signals.run_eval --strategy RiskOffComposite --params vix_threshold=16 hold_days=2
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
