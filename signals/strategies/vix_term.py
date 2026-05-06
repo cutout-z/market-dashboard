@@ -34,6 +34,11 @@ class VIXTermStructure(BaseStrategy):
         "RiskOffComposite for clean comparison."
     )
     target_symbol = "^GSPC"
+    target_label = "S&P 500 / SPY / ES beta"
+    trade_long = "Maintain long S&P 500 exposure while vol term structure is healthy."
+    trade_flat = "Reduce or hedge S&P 500 exposure while VIX term structure is stressed."
+    cadence = "Daily close; tactical volatility regime"
+    sizing_note = "Signal is a risk-on/risk-off overlay, not a volatility trade."
 
     # v2 defaults — best from autoresearch run 2026-04-29
     # Sharpe 0.64 vs v1 baseline 0.52 (B&H: 0.74)

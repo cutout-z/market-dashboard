@@ -569,7 +569,8 @@ async def partial_signals(request: Request):
     from signals.evaluate import _load_prices
     from signals import findings
 
-    window_start = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
+    tactical_window_start = (datetime.now() - timedelta(days=180)).strftime("%Y-%m-%d")
+    htf_window_start = (datetime.now() - timedelta(days=365 * 5)).strftime("%Y-%m-%d")
     leaderboard = findings.best_by_strategy()
     htf_leaderboard = best_by_objective()
     htf_strategy_names = set(HTF_STRATEGY_REGISTRY)
@@ -584,10 +585,17 @@ async def partial_signals(request: Request):
             params = best.get("metadata", {}).get("params", {}) if best else {}
             strategy = StratClass(**params) if params else StratClass()
             needed = list(set(strategy.required_symbols() + [strategy.target_symbol]))
-            prices = _load_prices(needed, start=window_start)
+            start_date = htf_window_start if name in htf_strategy_names else tactical_window_start
+            prices = _load_prices(needed, start=start_date)
             sigs = strategy.generate_signals(prices)
             last_val = int(sigs.iloc[-1]) if len(sigs) > 0 else 0
             last_date = str(sigs.index[-1].date()) if len(sigs) > 0 else "—"
+            metadata = strategy.metadata()
+            action_text = (
+                metadata["trade_long"] if last_val == 1
+                else metadata["trade_flat"] if last_val == 0
+                else metadata["trade_short"]
+            )
             signal_states.append({
                 "name": name,
                 "lane": lane,
@@ -595,6 +603,11 @@ async def partial_signals(request: Request):
                 "label": "LONG" if last_val == 1 else "FLAT" if last_val == 0 else "SHORT",
                 "date": last_date,
                 "version": strategy.version,
+                "target_symbol": strategy.target_symbol,
+                "target_label": metadata["target_label"],
+                "action_text": action_text,
+                "cadence": metadata["cadence"],
+                "sizing_note": metadata["sizing_note"],
                 "params": strategy.params,
                 "optimized": bool(best),
             })

@@ -28,6 +28,11 @@ class MomentumCrossover(BaseStrategy):
         "flat when fast crosses below slow (trend breakdown)."
     )
     target_symbol = "^GSPC"
+    target_label = "S&P 500 / SPY / ES beta"
+    trade_long = "Maintain long S&P 500 exposure while trend is up."
+    trade_flat = "Move out of S&P 500 exposure while trend is broken."
+    cadence = "Daily close; medium-term trend"
+    sizing_note = "Trend permission switch; exposure percentage is historical time-in-market."
 
     default_params = {
         "fast_period": 20,

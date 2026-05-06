@@ -20,20 +20,30 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from signals import findings
 from signals.robustness import evaluate_augmented
-from signals.strategies.monthly_trend import MonthlyTrendRegime
+from signals.strategies.monthly_trend import (
+    CopperMonthlyTrend,
+    CrudeMonthlyTrend,
+    GoldMonthlyTrend,
+    MonthlyTrendRegime,
+)
 
 
 STRATEGY_REGISTRY: dict = {
     "MonthlyTrendRegime": MonthlyTrendRegime,
+    "GoldMonthlyTrend": GoldMonthlyTrend,
+    "CrudeMonthlyTrend": CrudeMonthlyTrend,
+    "CopperMonthlyTrend": CopperMonthlyTrend,
+}
+
+MONTHLY_TREND_RANGES = {
+    "ma_months": (6, 15, int),
+    "confirm_months": (1, 3, int),
+    "defensive_buffer": (-0.03, 0.05, float),
+    "hold_months": (1, 4, int),
 }
 
 MUTATION_RANGES: dict = {
-    "MonthlyTrendRegime": {
-        "ma_months": (6, 15, int),
-        "confirm_months": (1, 3, int),
-        "defensive_buffer": (-0.03, 0.05, float),
-        "hold_months": (1, 4, int),
-    },
+    name: dict(MONTHLY_TREND_RANGES) for name in STRATEGY_REGISTRY
 }
 
 
