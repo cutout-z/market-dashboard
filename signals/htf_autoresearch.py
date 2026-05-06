@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from signals import findings
 from signals.robustness import evaluate_augmented
 from signals.strategies.monthly_trend import (
+    AUDUSDMonthlyTrend,
     CopperMonthlyTrend,
     CrudeMonthlyTrend,
     GoldMonthlyTrend,
@@ -33,6 +34,7 @@ STRATEGY_REGISTRY: dict = {
     "GoldMonthlyTrend": GoldMonthlyTrend,
     "CrudeMonthlyTrend": CrudeMonthlyTrend,
     "CopperMonthlyTrend": CopperMonthlyTrend,
+    "AUDUSDMonthlyTrend": AUDUSDMonthlyTrend,
 }
 
 MONTHLY_TREND_RANGES = {

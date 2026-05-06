@@ -109,3 +109,12 @@ class CopperMonthlyTrend(_MonthlyTrendBase):
     target_label = "Copper / CPER / HG futures"
     trade_long = "Maintain long copper exposure."
     trade_flat = "Hold cash instead of copper exposure; avoid long copper beta."
+
+
+class AUDUSDMonthlyTrend(_MonthlyTrendBase):
+    name = "AUDUSDMonthlyTrend"
+    description = "Higher-timeframe AUD/USD trend filter; long AUD/USD in monthly uptrends, flat otherwise."
+    target_symbol = "AUDUSD=X"
+    target_label = "AUD/USD spot / FXA / 6A futures"
+    trade_long = "Maintain long AUD/USD exposure: own AUD against USD."
+    trade_flat = "Hold cash/no FX directional exposure instead of long AUD/USD."
