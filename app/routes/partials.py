@@ -564,32 +564,47 @@ async def partial_shocks(
 @router.get("/signals", response_class=HTMLResponse)
 async def partial_signals(request: Request):
     from signals.run_eval import STRATEGY_REGISTRY
+    from signals.htf_autoresearch import STRATEGY_REGISTRY as HTF_STRATEGY_REGISTRY
+    from signals.htf_autoresearch import best_by_objective
     from signals.evaluate import _load_prices
     from signals import findings
 
     window_start = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
-    signal_states = []
-    for name, StratClass in STRATEGY_REGISTRY.items():
-        strategy = StratClass()
-        needed = list(set(strategy.required_symbols() + [strategy.target_symbol]))
-        prices = _load_prices(needed, start=window_start)
-        sigs = strategy.generate_signals(prices)
-        last_val = int(sigs.iloc[-1]) if len(sigs) > 0 else 0
-        last_date = str(sigs.index[-1].date()) if len(sigs) > 0 else "—"
-        signal_states.append({
-            "name": name,
-            "signal": last_val,
-            "label": "LONG" if last_val == 1 else "FLAT" if last_val == 0 else "SHORT",
-            "date": last_date,
-            "version": strategy.version,
-            "params": strategy.params,
-        })
-
     leaderboard = findings.best_by_strategy()
+    htf_leaderboard = best_by_objective()
+    htf_strategy_names = set(HTF_STRATEGY_REGISTRY)
+    signal_states = []
+    registries = [
+        ("Tactical", STRATEGY_REGISTRY),
+        ("Higher timeframe", HTF_STRATEGY_REGISTRY),
+    ]
+    for lane, registry in registries:
+        for name, StratClass in registry.items():
+            best = htf_leaderboard.get(name) if name in htf_strategy_names else leaderboard.get(name)
+            params = best.get("metadata", {}).get("params", {}) if best else {}
+            strategy = StratClass(**params) if params else StratClass()
+            needed = list(set(strategy.required_symbols() + [strategy.target_symbol]))
+            prices = _load_prices(needed, start=window_start)
+            sigs = strategy.generate_signals(prices)
+            last_val = int(sigs.iloc[-1]) if len(sigs) > 0 else 0
+            last_date = str(sigs.index[-1].date()) if len(sigs) > 0 else "—"
+            signal_states.append({
+                "name": name,
+                "lane": lane,
+                "signal": last_val,
+                "label": "LONG" if last_val == 1 else "FLAT" if last_val == 0 else "SHORT",
+                "date": last_date,
+                "version": strategy.version,
+                "params": strategy.params,
+                "optimized": bool(best),
+            })
+
     total_runs = findings.count()
 
     return templates.TemplateResponse(request, "partials/signals.html", {
         "signal_states": signal_states,
         "leaderboard": leaderboard,
+        "htf_leaderboard": htf_leaderboard,
+        "htf_strategy_names": htf_strategy_names,
         "total_runs": total_runs,
     })

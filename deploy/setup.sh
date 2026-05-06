@@ -28,12 +28,15 @@ else
 fi
 
 # ── 4. Clone repo ──────────────────────────────────────────────────────────
-if [ ! -d /home/market/app ]; then
+mkdir -p /home/market/app
+chown market:market /home/market/app
+
+if [ ! -d /home/market/app/market-dashboard/.git ]; then
   echo "Cloning repo..."
-  su - market -c "git clone https://github.com/cutout-z/claude-code-projects.git /home/market/app"
+  su - market -c "git clone https://github.com/cutout-z/market-dashboard.git /home/market/app/market-dashboard"
 else
   echo "Repo already cloned — pulling latest..."
-  su - market -c "cd /home/market/app && git pull"
+  su - market -c "cd /home/market/app/market-dashboard && git pull"
 fi
 
 # ── 5. Make scripts executable ─────────────────────────────────────────────

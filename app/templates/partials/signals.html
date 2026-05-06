@@ -11,7 +11,13 @@
                 <div class="flex items-start justify-between mb-3">
                     <div>
                         <div class="text-sm font-semibold text-gray-200">{{ s.name }}</div>
-                        <div class="text-[10px] text-gray-500 mt-0.5">{{ s.version }}</div>
+                        <div class="mt-1 flex flex-wrap gap-1.5 text-[10px]">
+                            <span class="text-gray-500">{{ s.version }}</span>
+                            <span class="rounded border border-gray-700 px-1.5 py-0.5 text-gray-400">{{ s.lane }}</span>
+                            {% if s.optimized %}
+                            <span class="rounded border border-blue-800/70 px-1.5 py-0.5 text-blue-400">best params</span>
+                            {% endif %}
+                        </div>
                     </div>
                     <span class="px-2.5 py-1 rounded text-xs font-bold tracking-wide
                         {% if s.signal == 1 %}bg-green-900/50 text-green-400{% elif s.signal == 0 %}bg-yellow-900/50 text-yellow-400{% else %}bg-red-900/50 text-red-400{% endif %}">
@@ -53,6 +59,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-800/50">
                     {% for name, e in leaderboard.items()|sort(attribute='1.sharpe', reverse=true) %}
+                    {% if name not in htf_strategy_names %}
                     {% set beats_bh = e.sharpe > e.bh_sharpe %}
                     <tr class="hover:bg-gray-800/30 transition-colors">
                         <td class="py-2 pr-4">
@@ -76,10 +83,61 @@
                             {{ e.eval_period.start[:7] }}→{{ e.eval_period.end[:7] }}
                         </td>
                     </tr>
+                    {% endif %}
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <!-- Higher-timeframe robustness -->
+    <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
+        <div class="mb-3 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-gray-300">Higher-Timeframe Robustness</h3>
+            <span class="text-[10px] text-gray-600">Ranked by composite objective</span>
+        </div>
+        {% if htf_leaderboard %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs text-gray-300">
+                <thead>
+                    <tr class="border-b border-gray-800 text-[10px] uppercase text-gray-500">
+                        <th class="pb-2 pr-4 text-left">Strategy</th>
+                        <th class="pb-2 pr-3 text-right">Objective</th>
+                        <th class="pb-2 pr-3 text-right">Sharpe</th>
+                        <th class="pb-2 pr-3 text-right">B&H Sharpe</th>
+                        <th class="pb-2 pr-3 text-right">CAGR</th>
+                        <th class="pb-2 pr-3 text-right">Max DD</th>
+                        <th class="pb-2 pr-3 text-right">Exposure</th>
+                        <th class="pb-2 text-right">WF Sharpe</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800/50">
+                    {% for name, e in htf_leaderboard.items()|sort(attribute='1.objective', reverse=true) %}
+                    {% set wf = e.walk_forward or {} %}
+                    <tr class="transition-colors hover:bg-gray-800/30">
+                        <td class="py-2 pr-4">
+                            <div class="font-medium text-gray-200">{{ name }}</div>
+                            <div class="text-[10px] text-gray-600">{{ e.metadata.version }}</div>
+                        </td>
+                        <td class="py-2 pr-3 text-right font-mono text-blue-400">{{ "%.3f"|format(e.objective) }}</td>
+                        <td class="py-2 pr-3 text-right font-mono text-gray-300">{{ "%.3f"|format(e.sharpe) }}</td>
+                        <td class="py-2 pr-3 text-right font-mono text-gray-500">{{ "%.3f"|format(e.bh_sharpe) }}</td>
+                        <td class="py-2 pr-3 text-right font-mono text-gray-300">{{ "%.1f"|format(e.cagr * 100) }}%</td>
+                        <td class="py-2 pr-3 text-right font-mono {% if e.max_drawdown < -0.3 %}text-red-400{% elif e.max_drawdown < -0.2 %}text-yellow-400{% else %}text-gray-400{% endif %}">
+                            {{ "%.1f"|format(e.max_drawdown * 100) }}%
+                        </td>
+                        <td class="py-2 pr-3 text-right font-mono text-gray-400">{{ "%.0f"|format(e.exposure * 100) }}%</td>
+                        <td class="py-2 text-right font-mono text-gray-400">
+                            {% if wf.mean_sharpe is defined %}{{ "%.3f"|format(wf.mean_sharpe) }}{% else %}—{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="py-6 text-center text-xs text-gray-500">No higher-timeframe research runs yet.</div>
+        {% endif %}
     </div>
 
     <!-- Mutation surface reference -->
