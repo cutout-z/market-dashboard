@@ -2,7 +2,7 @@
 
 Live market dashboard and auto-research lab for cross-asset macro monitoring, tactical signal research, and higher-timeframe regime testing.
 
-**Public Hetzner instance:** [http://116.203.146.144:8060](http://116.203.146.144:8060)
+**Public dashboard:** [https://market-dashboard-o8mh.onrender.com/](https://market-dashboard-o8mh.onrender.com/)
 
 > This is a research dashboard, not financial advice. Signals are experimental model outputs and should be treated as decision-support context, not trade instructions.
 
@@ -48,7 +48,7 @@ The most research-heavy page is:
 
 Direct link:
 
-[http://116.203.146.144:8060/signals](http://116.203.146.144:8060/signals)
+[https://market-dashboard-o8mh.onrender.com/signals](https://market-dashboard-o8mh.onrender.com/signals)
 
 ## Signals And Trade Expressions
 
@@ -215,15 +215,15 @@ The compose stack runs:
 | `worker` | Hourly tactical autoresearch, news classification, and source-quality snapshots. |
 | `htf_worker` | Higher-timeframe strategy sweeps, via `docker-compose.override.yml`. |
 
-## Hetzner Deployment
+## Deployment
 
-The live instance is currently served from a Hetzner cloud server:
+The public instance is currently served from Render:
 
 ```text
-http://116.203.146.144:8060
+https://market-dashboard-o8mh.onrender.com/
 ```
 
-Fresh-server setup script:
+Legacy Hetzner self-hosting files are still included. Fresh-server setup script:
 
 ```bash
 sudo bash deploy/setup.sh
@@ -278,7 +278,7 @@ deploy/                   Hetzner/systemd setup files
 
 ## Caveats
 
-- The public Hetzner instance is unauthenticated HTTP.
+- The public Render instance is unauthenticated HTTPS.
 - Signal performance is backtest/research output, not live trading validation.
 - Some macro and pre-1990 shock data is reference-grade and should be verified before use in a formal report.
 - `AUDUSDRateShock` uses market proxies for rate-decision shocks; it is not yet wired to actual RBA/Fed surprise data.
