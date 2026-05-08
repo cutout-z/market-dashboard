@@ -1,6 +1,6 @@
 [Unit]
 Description=Market Dashboard + Autoresearch Worker
-Documentation=https://github.com/cutout-z/claude-code-projects
+Documentation=https://github.com/cutout-z/market-dashboard
 After=docker.service network-online.target
 Requires=docker.service
 
