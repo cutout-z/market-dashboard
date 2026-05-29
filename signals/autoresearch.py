@@ -43,7 +43,11 @@ from signals.strategies.vix_term import VIXTermStructure
 from signals.strategies.momentum_crossover import MomentumCrossover
 from signals.strategies.mean_reversion import MeanReversion
 from signals.strategies.gold_copper_momentum import GoldCopperMomentum
-from signals.strategies.audusd_rate_shock import AUDUSDRateShock
+from signals.strategies.btc_sma_trend import (
+    Btc50DaySmaTrend,
+    Btc200DaySmaTrend,
+    Btc200WeekSmaTrend,
+)
 
 STRATEGY_REGISTRY: dict = {
     "RiskOffComposite": RiskOffComposite,
@@ -51,7 +55,9 @@ STRATEGY_REGISTRY: dict = {
     "MomentumCrossover": MomentumCrossover,
     "MeanReversion": MeanReversion,
     "GoldCopperMomentum": GoldCopperMomentum,
-    "AUDUSDRateShock": AUDUSDRateShock,
+    "Btc50DaySmaTrend": Btc50DaySmaTrend,
+    "Btc200DaySmaTrend": Btc200DaySmaTrend,
+    "Btc200WeekSmaTrend": Btc200WeekSmaTrend,
 }
 
 # Mutation ranges for each strategy's params.
@@ -85,18 +91,17 @@ MUTATION_RANGES: dict = {
         "hold_days": (1, 15, int),
         "smooth_period": (1, 10, int),
     },
-    "AUDUSDRateShock": {
-        "rate_lookback": (2, 20, int),
-        "rate_shock_bps": (8.0, 50.0, float),
-        "rate_relief_bps": (-40.0, -5.0, float),
-        "dxy_lookback": (2, 20, int),
-        "dxy_shock": (0.005, 0.04, float),
-        "dxy_relief": (-0.03, -0.003, float),
-        "vix_floor": (14.0, 35.0, float),
-        "commodity_lookback": (5, 60, int),
-        "commodity_threshold": (0.005, 0.08, float),
-        "conditions_required": (1, 3, int),
-        "hold_days": (1, 20, int),
+    "Btc50DaySmaTrend": {
+        "ma_period": (10, 100, int),
+        "hold_days": (1, 10, int),
+    },
+    "Btc200DaySmaTrend": {
+        "ma_period": (100, 300, int),
+        "hold_days": (1, 10, int),
+    },
+    "Btc200WeekSmaTrend": {
+        "ma_weeks": (100, 300, int),
+        "hold_days": (1, 28, int),
     },
 }
 

@@ -16,12 +16,13 @@ market-dashboard/
 │       ├── risk_off.py          # RiskOffComposite (macro risk-off)
 │       ├── vix_term.py          # VIXTermStructure (VIX backwardation)
 │       ├── momentum_crossover.py # MomentumCrossover (dual SMA trend)
+│       ├── btc_sma_trend.py      # BTC SMA trend filters (50D, 200D, 200W)
 │       ├── mean_reversion.py    # MeanReversion (z-score filter)
 │       └── gold_copper_momentum.py # GoldCopperMomentum (cross-asset growth)
 └── SIGNALS.md               # This file
 ```
 
-Historical data: `app/data/history/prices.parquet` — 135 symbols, daily OHLCV, ~2000–present.
+Historical data: `app/data/history/prices.parquet` — 138 symbols, daily OHLCV, ~2000–present.
 
 ## Running the Harness
 
@@ -158,6 +159,50 @@ Classic dual SMA trend-following signal. Long when fast SMA > slow SMA (uptrend 
 | `fast_period` | 20 | 5–50 |
 | `slow_period` | 100 | 50–250 |
 | `hold_days` | 1 | 1–10 |
+
+### BTC SMA Trend (`signals/strategies/btc_sma_trend.py`) — v1
+
+Screenshot-inspired Bitcoin long/flat trend filters. Long BTC when `BTC-USD`
+closes above the moving average, flat when it closes below. These are not
+short strategies.
+
+**Initial exact-rule results** (`BTC-USD`, 2014-09-17 to 2026-05-09):
+
+| Strategy | Rule | Sharpe | B&H Sharpe | CAGR | Max DD | Trades |
+|---|---|---:|---:|---:|---:|---:|
+| `Btc50DaySmaTrend` | Above 50-day SMA | 1.159 | 0.835 | 46.4% | -58.0% | 107 |
+| `Btc200DaySmaTrend` | Above 200-day SMA | 0.944 | 0.835 | 36.8% | -70.0% | 37 |
+| `Btc200WeekSmaTrend` | Above 200-week SMA | 0.468 | 0.835 | 11.2% | -78.2% | 7 |
+
+**Current autoresearch winners** after 20 seeded mutations per BTC SMA family:
+
+| Strategy | Best params | Sharpe | B&H Sharpe | CAGR | Max DD | Trades |
+|---|---|---:|---:|---:|---:|---:|
+| `Btc50DaySmaTrend` | `ma_period=44`, `hold_days=1` | 1.302 | 0.835 | 54.1% | -48.7% | 113 |
+| `Btc200DaySmaTrend` | `ma_period=175`, `hold_days=1` | 1.074 | 0.835 | 44.1% | -63.8% | 36 |
+| `Btc200WeekSmaTrend` | `ma_weeks=100`, `hold_days=1` | 0.814 | 0.835 | 30.7% | -81.8% | 6 |
+
+Note: the 200-week rule requires roughly 200 weeks of BTC history before the
+average exists, so the current harness leaves the strategy flat during the
+initial warm-up period.
+
+**Mutation surface**:
+
+| Strategy | Param | Default | Range to explore |
+|---|---|---:|---|
+| `Btc50DaySmaTrend` | `ma_period` | 50 | 10–100 |
+| `Btc200DaySmaTrend` | `ma_period` | 200 | 100–300 |
+| `Btc200WeekSmaTrend` | `ma_weeks` | 200 | 100–300 |
+| all BTC SMA variants | `hold_days` | 1 | 1–10 daily / 1–28 weekly |
+
+Example commands:
+
+```bash
+python -m signals.run_eval --strategy Btc50DaySmaTrend
+python -m signals.run_eval --strategy Btc200DaySmaTrend
+python -m signals.run_eval --strategy Btc200WeekSmaTrend
+python -m signals.autoresearch --strategy Btc50DaySmaTrend --mutations 20
+```
 
 ### GoldCopperMomentum (`signals/strategies/gold_copper_momentum.py`) — v1
 
