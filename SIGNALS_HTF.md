@@ -22,7 +22,7 @@ python worker_htf.py
 python worker_htf.py --interval 604800
 ```
 
-## Current Strategy
+## Current Strategies
 
 ### MonthlyTrendRegime
 
@@ -34,6 +34,10 @@ Classic monthly trend filter:
 - Goes flat when monthly trend is down.
 - Forward-fills the monthly regime across daily bars for backtesting.
 
+`MonthlyTrendRegime` computes the rule on linear prices. `MonthlyLogTrendRegime`
+uses the same rule on log prices, so the moving-average comparison is based on
+percentage compounding rather than raw index points.
+
 Mutation surface:
 
 | Parameter | Default | Range |
@@ -42,6 +46,8 @@ Mutation surface:
 | `confirm_months` | 1 | 1-3 |
 | `defensive_buffer` | 0.0 | -0.03 to 0.05 |
 | `hold_months` | 1 | 1-4 |
+
+Both monthly variants use the same mutation surface.
 
 ## Scoring
 

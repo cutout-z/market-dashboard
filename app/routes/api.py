@@ -24,10 +24,11 @@ async def api_sources():
     result = {}
     for s in ALL_SOURCES:
         age = s.cache_age()
+        cached = s.get_cached()
         result[s.cache_key] = {
             "refresh_interval": s.refresh_interval,
             "cache_age_seconds": round(age, 1) if age else None,
-            "has_data": s.get_cached() is not None,
+            "has_data": bool(cached and s._has_real_data(cached)),
         }
     return result
 

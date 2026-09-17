@@ -160,6 +160,8 @@ FOREX_HEATMAP_PERIODS = {
     "3M": {"period": "6mo", "days_back": 63},
     "YTD": {"period": "ytd", "days_back": None},  # calculated from Jan 1
     "1Y": {"period": "1y", "days_back": 252},
+    "5Y": {"period": "5y", "days_back": 1260},
+    "10Y": {"period": "10y", "days_back": 2500},
 }
 
 # ─── Bonds ───
@@ -548,6 +550,9 @@ MAG7_STOCKS = [
     {"symbol": "AMD",   "name": "AMD",         "group": "AI Infra"},
     {"symbol": "TSM",   "name": "TSMC",        "group": "AI Infra"},
     {"symbol": "PLTR",  "name": "Palantir",    "group": "AI Infra"},
+    {"symbol": "EQIX",  "name": "Equinix",     "group": "DC Operators"},
+    {"symbol": "DLR",   "name": "Digital Realty", "group": "DC Operators"},
+    {"symbol": "AMT",   "name": "American Tower", "group": "DC Operators"},
 ]
 
 # ─── Options Skew ───

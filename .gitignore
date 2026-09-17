@@ -11,3 +11,4 @@ signals/findings.jsonl
 *.egg-info/
 dist/
 build/
+.DS_Store

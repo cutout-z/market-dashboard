@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 from app.sources.shocks import HistoricalShocksSource, ShockAnalogMatcher
 from app.sources.indices import IndicesSource
 from app.sources.futures import FuturesSource
-from app.sources.forex import ForexSource
+from app.sources.forex import CORRELATION_PERIODS, ForexSource
 from app.sources.bonds import BondsSource
 from app.sources.economy_live import EconomyLiveSource
 from app.sources.polymarket import PolymarketSource
@@ -113,12 +113,24 @@ async def partial_forex_heatmap(request: Request, period: str = "1D"):
 
 
 @router.get("/forex-correlations", response_class=HTMLResponse)
-async def partial_forex_correlations(request: Request):
+async def partial_forex_correlations(request: Request, period: str = "3M"):
+    if period not in CORRELATION_PERIODS:
+        period = "3M"
+
     data = forex_source.get_cached() or {}
-    corr = data.get("correlations", {"labels": [], "matrix": []})
+    correlations = data.get("correlations", {})
+
+    if "labels" in correlations and "matrix" in correlations:
+        # Backward compatibility for caches written before correlations were periodised.
+        corr = correlations if period == "3M" else {"labels": [], "matrix": []}
+    else:
+        corr = correlations.get(period, {"labels": [], "matrix": []})
+
     return templates.TemplateResponse(request, "partials/forex_correlations.html", {
         "labels": corr.get("labels", []),
         "matrix": corr.get("matrix", []),
+        "period": period,
+        "window_days": corr.get("window_days", CORRELATION_PERIODS[period]),
     })
 
 
@@ -309,9 +321,11 @@ async def partial_vol_countdown(request: Request):
 # ─── Mag 7 ───
 @router.get("/mag7", response_class=HTMLResponse)
 async def partial_mag7(request: Request):
-    data = mag7_source.get_cached() or {"stocks": []}
+    data = mag7_source.get_cached() or {"stocks": [], "valuation_heat": {}, "chat_etf": {}}
     return templates.TemplateResponse(request, "partials/mag7.html", {
         "stocks": data.get("stocks", []),
+        "valuation_heat": data.get("valuation_heat", {}),
+        "chat_etf": data.get("chat_etf", {}),
     })
 
 
@@ -564,60 +578,72 @@ async def partial_shocks(
 @router.get("/signals", response_class=HTMLResponse)
 async def partial_signals(request: Request):
     from signals.run_eval import STRATEGY_REGISTRY
+    from signals.autoresearch import MUTATION_RANGES
+    from signals.htf_autoresearch import MUTATION_RANGES as HTF_MUTATION_RANGES
     from signals.htf_autoresearch import STRATEGY_REGISTRY as HTF_STRATEGY_REGISTRY
-    from signals.htf_autoresearch import best_by_objective
     from signals.evaluate import _load_prices
     from signals import findings
 
-    tactical_window_start = (datetime.now() - timedelta(days=180)).strftime("%Y-%m-%d")
-    htf_window_start = (datetime.now() - timedelta(days=365 * 5)).strftime("%Y-%m-%d")
-    leaderboard = findings.best_by_strategy()
-    htf_leaderboard = best_by_objective()
-    htf_strategy_names = set(HTF_STRATEGY_REGISTRY)
+    def format_value(value) -> str:
+        if isinstance(value, float):
+            return f"{value:g}"
+        return str(value)
+
+    def format_range(lo, hi) -> str:
+        lo_s = format_value(lo)
+        hi_s = format_value(hi)
+        if float(lo) < 0 or float(hi) < 0:
+            return f"{lo_s} to {hi_s}"
+        return f"{lo_s}-{hi_s}"
+
+    strategy_registry = {**STRATEGY_REGISTRY, **HTF_STRATEGY_REGISTRY}
+    mutation_ranges = {**MUTATION_RANGES, **HTF_MUTATION_RANGES}
+
+    window_start = "2000-01-01"
     signal_states = []
-    registries = [
-        ("Tactical", STRATEGY_REGISTRY),
-        ("Higher timeframe", HTF_STRATEGY_REGISTRY),
-    ]
-    for lane, registry in registries:
-        for name, StratClass in registry.items():
-            best = htf_leaderboard.get(name) if name in htf_strategy_names else leaderboard.get(name)
-            params = best.get("metadata", {}).get("params", {}) if best else {}
-            strategy = StratClass(**params) if params else StratClass()
-            needed = list(set(strategy.required_symbols() + [strategy.target_symbol]))
-            start_date = htf_window_start if name in htf_strategy_names else tactical_window_start
-            prices = _load_prices(needed, start=start_date)
-            sigs = strategy.generate_signals(prices)
-            last_val = int(sigs.iloc[-1]) if len(sigs) > 0 else 0
-            last_date = str(sigs.index[-1].date()) if len(sigs) > 0 else "—"
-            metadata = strategy.metadata()
-            action_text = (
-                metadata["trade_long"] if last_val == 1
-                else metadata["trade_flat"] if last_val == 0
-                else metadata["trade_short"]
-            )
-            signal_states.append({
-                "name": name,
-                "lane": lane,
-                "signal": last_val,
-                "label": "LONG" if last_val == 1 else "FLAT" if last_val == 0 else "SHORT",
-                "date": last_date,
-                "version": strategy.version,
-                "target_symbol": strategy.target_symbol,
-                "target_label": metadata["target_label"],
-                "action_text": action_text,
-                "cadence": metadata["cadence"],
-                "sizing_note": metadata["sizing_note"],
-                "params": strategy.params,
-                "optimized": bool(best),
+    for name, StratClass in strategy_registry.items():
+        strategy = StratClass()
+        needed = list(set(strategy.required_symbols() + [strategy.target_symbol]))
+        prices = _load_prices(needed, start=window_start)
+        sigs = strategy.generate_signals(prices)
+        last_val = int(sigs.iloc[-1]) if len(sigs) > 0 else 0
+        last_date = str(sigs.index[-1].date()) if len(sigs) > 0 else "—"
+        signal_states.append({
+            "name": name,
+            "signal": last_val,
+            "label": "LONG" if last_val == 1 else "FLAT" if last_val == 0 else "SHORT",
+            "date": last_date,
+            "version": strategy.version,
+            "params": strategy.params,
+        })
+
+    leaderboard = findings.best_by_strategy()
+    total_runs = findings.count()
+    mutation_surfaces = []
+    for name, StratClass in strategy_registry.items():
+        ranges = mutation_ranges.get(name, {})
+        if not ranges:
+            continue
+
+        defaults = getattr(StratClass, "default_params", {})
+        rows = []
+        for param, (lo, hi, ptype) in ranges.items():
+            rows.append({
+                "param": param,
+                "default": format_value(defaults.get(param, "-")),
+                "explore": format_range(lo, hi),
+                "type": ptype.__name__,
             })
 
-    total_runs = findings.count()
+        mutation_surfaces.append({
+            "name": name,
+            "description": getattr(StratClass, "description", ""),
+            "rows": rows,
+        })
 
     return templates.TemplateResponse(request, "partials/signals.html", {
         "signal_states": signal_states,
         "leaderboard": leaderboard,
-        "htf_leaderboard": htf_leaderboard,
-        "htf_strategy_names": htf_strategy_names,
         "total_runs": total_runs,
+        "mutation_surfaces": mutation_surfaces,
     })

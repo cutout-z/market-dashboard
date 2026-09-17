@@ -32,11 +32,6 @@ class MeanReversion(BaseStrategy):
         "threshold (overbought/extended). Defensive mean-reversion filter."
     )
     target_symbol = "^GSPC"
-    target_label = "S&P 500 / SPY / ES beta"
-    trade_long = "Maintain long S&P 500 exposure."
-    trade_flat = "Pause or trim S&P 500 exposure while price is statistically extended."
-    cadence = "Daily close; tactical overextension filter"
-    sizing_note = "Defensive filter only; does not estimate ideal position size."
 
     default_params = {
         "lookback": 50,

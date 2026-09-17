@@ -35,24 +35,31 @@ from signals import findings
 from signals.evaluate import evaluate
 from signals.strategies.risk_off import RiskOffComposite
 from signals.strategies.vix_term import VIXTermStructure
-from signals.strategies.momentum_crossover import MomentumCrossover
+from signals.strategies.momentum_crossover import MomentumCrossover, MomentumLogCrossover
 from signals.strategies.mean_reversion import MeanReversion
 from signals.strategies.gold_copper_momentum import GoldCopperMomentum
 from signals.strategies.btc_sma_trend import (
     Btc50DaySmaTrend,
+    Btc50DayLogSmaTrend,
     Btc200DaySmaTrend,
+    Btc200DayLogSmaTrend,
     Btc200WeekSmaTrend,
+    Btc200WeekLogSmaTrend,
 )
 
 STRATEGY_REGISTRY: dict = {
     "RiskOffComposite": RiskOffComposite,
     "VIXTermStructure": VIXTermStructure,
     "MomentumCrossover": MomentumCrossover,
+    "MomentumLogCrossover": MomentumLogCrossover,
     "MeanReversion": MeanReversion,
     "GoldCopperMomentum": GoldCopperMomentum,
     "Btc50DaySmaTrend": Btc50DaySmaTrend,
+    "Btc50DayLogSmaTrend": Btc50DayLogSmaTrend,
     "Btc200DaySmaTrend": Btc200DaySmaTrend,
+    "Btc200DayLogSmaTrend": Btc200DayLogSmaTrend,
     "Btc200WeekSmaTrend": Btc200WeekSmaTrend,
+    "Btc200WeekLogSmaTrend": Btc200WeekLogSmaTrend,
 }
 
 

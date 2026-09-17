@@ -1,0 +1,19 @@
+[Unit]
+Description=ARCHIVED VPS ONLY - Market Dashboard daily historical data backfill
+Documentation=https://github.com/cutout-z/market-dashboard
+After=docker.service network-online.target market-dashboard.service
+Requires=docker.service
+
+# Active runtime moved to the QNAP NAS runner on 2026-05-29. Use:
+# /share/AI_Wif_Brain_Work/runner-stack/scripts/qnap-run-job market-backfill
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/home/market/app/market-dashboard
+EnvironmentFile=/etc/market-dashboard/env
+
+ExecStart=/usr/bin/docker compose run --rm dashboard python -m etl.backfill --incremental
+
+StandardOutput=journal
+StandardError=journal

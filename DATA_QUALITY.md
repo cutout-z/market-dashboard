@@ -62,7 +62,7 @@ Each line in `events.jsonl`:
 
 ## Known Limitations
 
-- **data_rate for non-price sources**: `_has_real_data()` only checks for `"price"` keys in list items. Sources like FRED, bonds, economy return yields/indicators and always score 0% on data_rate even when returning valid data. Fix: make `_has_real_data()` source-aware or add per-source data validation.
+- **Historical data-rate telemetry**: events logged before 2026-05-06 may undercount non-price sources because the old validator only recognised price fields. New refresh events use the recursive structured-data validator.
 - **Single-pass telemetry**: Events are only logged during live refresh cycles. To build a meaningful dataset, the dashboard needs to run for hours/days. Quick burst tests give latency data but not reliability trends.
 
 ## Mutation Surface
@@ -91,6 +91,5 @@ Parameters the autoresearch agent can experiment with:
 
 Priority optimizations:
 - Add retry logic to `BaseSource.refresh()` for transient failures
-- Fix `_has_real_data()` to handle non-price sources (FRED, bonds, economy)
 - Tune refresh_interval per source based on actual data change frequency
 - Add connection pooling / session reuse for FRED API calls

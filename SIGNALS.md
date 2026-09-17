@@ -15,8 +15,8 @@ market-dashboard/
 │   └── strategies/
 │       ├── risk_off.py          # RiskOffComposite (macro risk-off)
 │       ├── vix_term.py          # VIXTermStructure (VIX backwardation)
-│       ├── momentum_crossover.py # MomentumCrossover (dual SMA trend)
-│       ├── btc_sma_trend.py      # BTC SMA trend filters (50D, 200D, 200W)
+│       ├── momentum_crossover.py # Linear/log dual SMA trend filters
+│       ├── btc_sma_trend.py      # Linear/log BTC SMA filters (50D, 200D, 200W)
 │       ├── mean_reversion.py    # MeanReversion (z-score filter)
 │       └── gold_copper_momentum.py # GoldCopperMomentum (cross-asset growth)
 └── SIGNALS.md               # This file
@@ -148,7 +148,7 @@ Isolates one condition from RiskOffComposite. Goes flat when VIX spot > VIX 3-Mo
 
 ### MomentumCrossover (`signals/strategies/momentum_crossover.py`) — v1
 
-Classic dual SMA trend-following signal. Long when fast SMA > slow SMA (uptrend confirmed), flat when bearish crossover. Very low trade frequency.
+Classic dual SMA trend-following signal. Long when fast SMA > slow SMA (uptrend confirmed), flat when bearish crossover. `MomentumCrossover` computes SMAs on linear prices; `MomentumLogCrossover` computes the same crossover on log prices. Very low trade frequency.
 
 **Best result**: Sharpe 0.648 (B&H 0.745), CAGR 7.0%, max DD −22.9%
 
@@ -160,21 +160,24 @@ Classic dual SMA trend-following signal. Long when fast SMA > slow SMA (uptrend 
 | `slow_period` | 100 | 50–250 |
 | `hold_days` | 1 | 1–10 |
 
+`MomentumLogCrossover` uses the same mutation surface.
+
 ### BTC SMA Trend (`signals/strategies/btc_sma_trend.py`) — v1
 
 Screenshot-inspired Bitcoin long/flat trend filters. Long BTC when `BTC-USD`
-closes above the moving average, flat when it closes below. These are not
-short strategies.
+closes above the moving average, flat when it closes below. Linear variants
+compare raw price to a raw-price SMA. Log variants compare log price to a
+log-price SMA. These are not short strategies.
 
-**Initial exact-rule results** (`BTC-USD`, 2014-09-17 to 2026-05-09):
+**Initial exact-rule linear results** (`BTC-USD`, 2014-09-17 to 2026-05-09):
 
 | Strategy | Rule | Sharpe | B&H Sharpe | CAGR | Max DD | Trades |
 |---|---|---:|---:|---:|---:|---:|
-| `Btc50DaySmaTrend` | Above 50-day SMA | 1.159 | 0.835 | 46.4% | -58.0% | 107 |
-| `Btc200DaySmaTrend` | Above 200-day SMA | 0.944 | 0.835 | 36.8% | -70.0% | 37 |
-| `Btc200WeekSmaTrend` | Above 200-week SMA | 0.468 | 0.835 | 11.2% | -78.2% | 7 |
+| `Btc50DaySmaTrend` | Above linear 50-day SMA | 1.159 | 0.835 | 46.4% | -58.0% | 107 |
+| `Btc200DaySmaTrend` | Above linear 200-day SMA | 0.944 | 0.835 | 36.8% | -70.0% | 37 |
+| `Btc200WeekSmaTrend` | Above linear 200-week SMA | 0.468 | 0.835 | 11.2% | -78.2% | 7 |
 
-**Current autoresearch winners** after 20 seeded mutations per BTC SMA family:
+**Current autoresearch winners** after 20 seeded mutations per linear BTC SMA family:
 
 | Strategy | Best params | Sharpe | B&H Sharpe | CAGR | Max DD | Trades |
 |---|---|---:|---:|---:|---:|---:|
@@ -190,17 +193,20 @@ initial warm-up period.
 
 | Strategy | Param | Default | Range to explore |
 |---|---|---:|---|
-| `Btc50DaySmaTrend` | `ma_period` | 50 | 10–100 |
-| `Btc200DaySmaTrend` | `ma_period` | 200 | 100–300 |
-| `Btc200WeekSmaTrend` | `ma_weeks` | 200 | 100–300 |
+| `Btc50DaySmaTrend`, `Btc50DayLogSmaTrend` | `ma_period` | 50 | 10–100 |
+| `Btc200DaySmaTrend`, `Btc200DayLogSmaTrend` | `ma_period` | 200 | 100–300 |
+| `Btc200WeekSmaTrend`, `Btc200WeekLogSmaTrend` | `ma_weeks` | 200 | 100–300 |
 | all BTC SMA variants | `hold_days` | 1 | 1–10 daily / 1–28 weekly |
 
 Example commands:
 
 ```bash
 python -m signals.run_eval --strategy Btc50DaySmaTrend
+python -m signals.run_eval --strategy Btc50DayLogSmaTrend
 python -m signals.run_eval --strategy Btc200DaySmaTrend
+python -m signals.run_eval --strategy Btc200DayLogSmaTrend
 python -m signals.run_eval --strategy Btc200WeekSmaTrend
+python -m signals.run_eval --strategy Btc200WeekLogSmaTrend
 python -m signals.autoresearch --strategy Btc50DaySmaTrend --mutations 20
 ```
 

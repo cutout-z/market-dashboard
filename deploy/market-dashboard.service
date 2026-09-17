@@ -1,8 +1,13 @@
 [Unit]
-Description=Market Dashboard + Autoresearch Worker
+Description=ARCHIVED VPS ONLY - Market Dashboard + Autoresearch Worker
 Documentation=https://github.com/cutout-z/market-dashboard
 After=docker.service network-online.target
 Requires=docker.service
+
+# Active runtime moved to the QNAP NAS runner on 2026-05-29. See:
+# /share/AI_Wif_Brain_Work/runner-stack/scripts/qnap-run-job market-dashboard
+# /share/AI_Wif_Brain_Work/runner-stack/scripts/qnap-run-job market-worker
+# tools/nas-runner/compose.yml in the local workspace.
 
 [Service]
 Type=simple

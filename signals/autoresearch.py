@@ -40,24 +40,31 @@ from signals import findings
 from signals.evaluate import evaluate
 from signals.strategies.risk_off import RiskOffComposite
 from signals.strategies.vix_term import VIXTermStructure
-from signals.strategies.momentum_crossover import MomentumCrossover
+from signals.strategies.momentum_crossover import MomentumCrossover, MomentumLogCrossover
 from signals.strategies.mean_reversion import MeanReversion
 from signals.strategies.gold_copper_momentum import GoldCopperMomentum
 from signals.strategies.btc_sma_trend import (
     Btc50DaySmaTrend,
+    Btc50DayLogSmaTrend,
     Btc200DaySmaTrend,
+    Btc200DayLogSmaTrend,
     Btc200WeekSmaTrend,
+    Btc200WeekLogSmaTrend,
 )
 
 STRATEGY_REGISTRY: dict = {
     "RiskOffComposite": RiskOffComposite,
     "VIXTermStructure": VIXTermStructure,
     "MomentumCrossover": MomentumCrossover,
+    "MomentumLogCrossover": MomentumLogCrossover,
     "MeanReversion": MeanReversion,
     "GoldCopperMomentum": GoldCopperMomentum,
     "Btc50DaySmaTrend": Btc50DaySmaTrend,
+    "Btc50DayLogSmaTrend": Btc50DayLogSmaTrend,
     "Btc200DaySmaTrend": Btc200DaySmaTrend,
+    "Btc200DayLogSmaTrend": Btc200DayLogSmaTrend,
     "Btc200WeekSmaTrend": Btc200WeekSmaTrend,
+    "Btc200WeekLogSmaTrend": Btc200WeekLogSmaTrend,
 }
 
 # Mutation ranges for each strategy's params.
@@ -80,6 +87,11 @@ MUTATION_RANGES: dict = {
         "slow_period": (50, 250, int),
         "hold_days": (1, 10, int),
     },
+    "MomentumLogCrossover": {
+        "fast_period": (5, 50, int),
+        "slow_period": (50, 250, int),
+        "hold_days": (1, 10, int),
+    },
     "MeanReversion": {
         "lookback": (20, 200, int),
         "z_upper": (1.0, 3.0, float),
@@ -95,11 +107,23 @@ MUTATION_RANGES: dict = {
         "ma_period": (10, 100, int),
         "hold_days": (1, 10, int),
     },
+    "Btc50DayLogSmaTrend": {
+        "ma_period": (10, 100, int),
+        "hold_days": (1, 10, int),
+    },
     "Btc200DaySmaTrend": {
         "ma_period": (100, 300, int),
         "hold_days": (1, 10, int),
     },
+    "Btc200DayLogSmaTrend": {
+        "ma_period": (100, 300, int),
+        "hold_days": (1, 10, int),
+    },
     "Btc200WeekSmaTrend": {
+        "ma_weeks": (100, 300, int),
+        "hold_days": (1, 28, int),
+    },
+    "Btc200WeekLogSmaTrend": {
         "ma_weeks": (100, 300, int),
         "hold_days": (1, 28, int),
     },

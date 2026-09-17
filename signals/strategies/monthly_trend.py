@@ -4,7 +4,8 @@ Strategy logic
 --------------
 Evaluates the target asset at month-end only. Goes long when the month-end
 close is above its moving average and flat otherwise. The monthly decision is
-forward-filled across daily bars for backtesting.
+forward-filled across daily bars for backtesting. The base strategy uses
+linear prices; the log variant computes the same rule on log prices.
 
 This is a low-turnover, bear-market avoidance baseline. It is intentionally
 simple so other higher-timeframe strategies can be judged against it.
@@ -16,18 +17,16 @@ Autoresearch mutation surface
     defensive_buffer   float  default 0   — require close > MA * (1 + buffer)
     hold_months        int    default 1   — stay flat this many months after trigger
 """
+import numpy as np
 import pandas as pd
 
 from ..strategy import BaseStrategy
 
 
-class _MonthlyTrendBase(BaseStrategy):
+class _MonthlyTrendRegimeBase(BaseStrategy):
     version = "v1"
-    cadence = "Monthly close; higher-timeframe regime"
-    sizing_note = (
-        "Signal is an allocation posture. Exposure is historical time-in-market, "
-        "not a recommended portfolio weight."
-    )
+    target_symbol = "^GSPC"
+    price_scale = "linear"
 
     default_params = {
         "ma_months": 10,
@@ -39,9 +38,14 @@ class _MonthlyTrendBase(BaseStrategy):
     def required_symbols(self) -> list[str]:
         return []
 
+    def _price_basis(self, close: pd.Series) -> pd.Series:
+        if self.price_scale == "log":
+            return np.log(close.where(close > 0))
+        return close
+
     def generate_signals(self, prices: dict[str, pd.Series]) -> pd.Series:
         p = self.params
-        close = prices[self.target_symbol].dropna()
+        close = self._price_basis(prices[self.target_symbol].dropna())
 
         monthly_close = close.resample("ME").last()
         monthly_ma = monthly_close.rolling(
@@ -72,49 +76,18 @@ class _MonthlyTrendBase(BaseStrategy):
         return daily_signal
 
 
-class MonthlyTrendRegime(_MonthlyTrendBase):
+class MonthlyTrendRegime(_MonthlyTrendRegimeBase):
     name = "MonthlyTrendRegime"
     description = (
         "Higher-timeframe S&P 500 trend filter; long when monthly close is "
-        "above its moving average, flat in monthly downtrends."
+        "above its linear moving average, flat in monthly downtrends."
     )
-    target_symbol = "^GSPC"
-    target_label = "S&P 500 / SPY / ES beta"
-    trade_long = "Maintain strategic long S&P 500 exposure."
-    trade_flat = "Move S&P 500 allocation to cash, T-bills, or defensive substitute."
 
 
-class GoldMonthlyTrend(_MonthlyTrendBase):
-    name = "GoldMonthlyTrend"
-    description = "Higher-timeframe gold trend filter; long gold in monthly uptrends, flat otherwise."
-    target_symbol = "GC=F"
-    target_label = "Gold / GLD / GC futures"
-    trade_long = "Maintain long gold exposure."
-    trade_flat = "Hold cash instead of gold exposure; do not force a short."
-
-
-class CrudeMonthlyTrend(_MonthlyTrendBase):
-    name = "CrudeMonthlyTrend"
-    description = "Higher-timeframe crude oil trend filter; long crude in monthly uptrends, flat otherwise."
-    target_symbol = "CL=F"
-    target_label = "WTI crude / USO / CL futures"
-    trade_long = "Maintain long crude oil exposure."
-    trade_flat = "Hold cash instead of crude exposure; avoid long oil beta."
-
-
-class CopperMonthlyTrend(_MonthlyTrendBase):
-    name = "CopperMonthlyTrend"
-    description = "Higher-timeframe copper trend filter; long copper in monthly uptrends, flat otherwise."
-    target_symbol = "HG=F"
-    target_label = "Copper / CPER / HG futures"
-    trade_long = "Maintain long copper exposure."
-    trade_flat = "Hold cash instead of copper exposure; avoid long copper beta."
-
-
-class AUDUSDMonthlyTrend(_MonthlyTrendBase):
-    name = "AUDUSDMonthlyTrend"
-    description = "Higher-timeframe AUD/USD trend filter; long AUD/USD in monthly uptrends, flat otherwise."
-    target_symbol = "AUDUSD=X"
-    target_label = "AUD/USD spot / FXA / 6A futures"
-    trade_long = "Maintain long AUD/USD exposure: own AUD against USD."
-    trade_flat = "Hold cash/no FX directional exposure instead of long AUD/USD."
+class MonthlyLogTrendRegime(_MonthlyTrendRegimeBase):
+    name = "MonthlyLogTrendRegime"
+    price_scale = "log"
+    description = (
+        "Higher-timeframe S&P 500 trend filter; long when monthly log close is "
+        "above its log moving average, flat in monthly downtrends."
+    )

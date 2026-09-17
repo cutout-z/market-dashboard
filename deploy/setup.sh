@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
+# ARCHIVED VPS SETUP ONLY.
+#
+# Active runtime moved to the QNAP NAS runner on 2026-05-29:
+#   tools/nas-runner/compose.yml
+#   tools/nas-runner/scripts/nas-job
+#   tools/nas-runner/WORKFLOW_REMAP.md
+#
+# Do not use this file to infer current Market Dashboard operations. It is kept
+# only as a historical rollback/migration artifact.
+#
 # One-time Hetzner server setup — run as root on a fresh Ubuntu 24.04 VPS.
 # After this script, complete the manual steps printed at the end.
 set -euo pipefail
@@ -49,8 +59,13 @@ chmod 700 /etc/market-dashboard
 # ── 7. Install systemd service ─────────────────────────────────────────────
 cp /home/market/app/market-dashboard/deploy/market-dashboard.service \
    /etc/systemd/system/market-dashboard.service
+cp /home/market/app/market-dashboard/deploy/market-backfill.service \
+   /etc/systemd/system/market-backfill.service
+cp /home/market/app/market-dashboard/deploy/market-backfill.timer \
+   /etc/systemd/system/market-backfill.timer
 systemctl daemon-reload
 systemctl enable market-dashboard
+systemctl enable market-backfill.timer
 
 # ── 8. Build Docker image ──────────────────────────────────────────────────
 echo "Building Docker image..."

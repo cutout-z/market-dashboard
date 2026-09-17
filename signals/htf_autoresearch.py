@@ -20,32 +20,27 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from signals import findings
 from signals.robustness import evaluate_augmented
-from signals.strategies.monthly_trend import (
-    AUDUSDMonthlyTrend,
-    CopperMonthlyTrend,
-    CrudeMonthlyTrend,
-    GoldMonthlyTrend,
-    MonthlyTrendRegime,
-)
+from signals.strategies.monthly_trend import MonthlyLogTrendRegime, MonthlyTrendRegime
 
 
 STRATEGY_REGISTRY: dict = {
     "MonthlyTrendRegime": MonthlyTrendRegime,
-    "GoldMonthlyTrend": GoldMonthlyTrend,
-    "CrudeMonthlyTrend": CrudeMonthlyTrend,
-    "CopperMonthlyTrend": CopperMonthlyTrend,
-    "AUDUSDMonthlyTrend": AUDUSDMonthlyTrend,
-}
-
-MONTHLY_TREND_RANGES = {
-    "ma_months": (6, 15, int),
-    "confirm_months": (1, 3, int),
-    "defensive_buffer": (-0.03, 0.05, float),
-    "hold_months": (1, 4, int),
+    "MonthlyLogTrendRegime": MonthlyLogTrendRegime,
 }
 
 MUTATION_RANGES: dict = {
-    name: dict(MONTHLY_TREND_RANGES) for name in STRATEGY_REGISTRY
+    "MonthlyTrendRegime": {
+        "ma_months": (6, 15, int),
+        "confirm_months": (1, 3, int),
+        "defensive_buffer": (-0.03, 0.05, float),
+        "hold_months": (1, 4, int),
+    },
+    "MonthlyLogTrendRegime": {
+        "ma_months": (6, 15, int),
+        "confirm_months": (1, 3, int),
+        "defensive_buffer": (-0.03, 0.05, float),
+        "hold_months": (1, 4, int),
+    },
 }
 
 

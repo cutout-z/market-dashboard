@@ -1,0 +1,16 @@
+[Unit]
+Description=ARCHIVED VPS ONLY - Run Market Dashboard historical data backfill daily
+Documentation=https://github.com/cutout-z/market-dashboard
+
+# Active scheduling moved to QNAP scheduler under the managed AI_WIF_BRAIN_NAS
+# crontab block. This timer is retained only as a VPS migration artifact.
+
+[Timer]
+# 23:30 UTC = 07:30 Australia/Perth.
+OnCalendar=*-*-* 23:30:00
+RandomizedDelaySec=10m
+Persistent=true
+Unit=market-backfill.service
+
+[Install]
+WantedBy=timers.target

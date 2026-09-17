@@ -4,7 +4,8 @@ Strategy logic
 --------------
 Classic trend-following signal. Long S&P 500 when the fast SMA is above
 the slow SMA (uptrend confirmed). Flat (cash) when fast SMA crosses below
-slow SMA (trend breakdown).
+slow SMA (trend breakdown). The base strategy uses linear prices; the log
+variant computes the same rule on log prices.
 
 Signal is held flat for `hold_days` after each bearish crossover.
 Target: S&P 500 (^GSPC) daily returns.
@@ -15,24 +16,16 @@ Autoresearch mutation surface
     slow_period   int    default 100  — slow SMA window (range: 50–250)
     hold_days     int    default 1    — flat hold extension after bearish cross
 """
+import numpy as np
 import pandas as pd
 
 from ..strategy import BaseStrategy
 
 
-class MomentumCrossover(BaseStrategy):
-    name = "MomentumCrossover"
+class _MomentumCrossoverBase(BaseStrategy):
     version = "v1"
-    description = (
-        "Long S&P 500 when fast SMA > slow SMA (uptrend); "
-        "flat when fast crosses below slow (trend breakdown)."
-    )
     target_symbol = "^GSPC"
-    target_label = "S&P 500 / SPY / ES beta"
-    trade_long = "Maintain long S&P 500 exposure while trend is up."
-    trade_flat = "Move out of S&P 500 exposure while trend is broken."
-    cadence = "Daily close; medium-term trend"
-    sizing_note = "Trend permission switch; exposure percentage is historical time-in-market."
+    price_scale = "linear"
 
     default_params = {
         "fast_period": 20,
@@ -43,9 +36,14 @@ class MomentumCrossover(BaseStrategy):
     def required_symbols(self) -> list[str]:
         return []  # only needs target_symbol (^GSPC)
 
+    def _price_basis(self, close: pd.Series) -> pd.Series:
+        if self.price_scale == "log":
+            return np.log(close.where(close > 0))
+        return close
+
     def generate_signals(self, prices: dict[str, pd.Series]) -> pd.Series:
         p = self.params
-        close = prices[self.target_symbol]
+        close = self._price_basis(prices[self.target_symbol])
 
         fast_sma = close.rolling(p["fast_period"], min_periods=p["fast_period"]).mean()
         slow_sma = close.rolling(p["slow_period"], min_periods=p["slow_period"]).mean()
@@ -65,3 +63,20 @@ class MomentumCrossover(BaseStrategy):
         signal = signal.fillna(0).astype(int)
         signal.name = "signal"
         return signal
+
+
+class MomentumCrossover(_MomentumCrossoverBase):
+    name = "MomentumCrossover"
+    description = (
+        "Linear-price SMA crossover: long S&P 500 when fast SMA > slow SMA; "
+        "flat when fast crosses below slow."
+    )
+
+
+class MomentumLogCrossover(_MomentumCrossoverBase):
+    name = "MomentumLogCrossover"
+    price_scale = "log"
+    description = (
+        "Log-price SMA crossover: long S&P 500 when fast log-SMA > slow log-SMA; "
+        "flat when fast crosses below slow."
+    )

@@ -32,11 +32,6 @@ class GoldCopperMomentum(BaseStrategy):
         "flat when ratio deteriorates below threshold (risk-off)."
     )
     target_symbol = "^GSPC"
-    target_label = "S&P 500 / SPY / ES beta"
-    trade_long = "Maintain long S&P 500 exposure while copper/gold confirms growth."
-    trade_flat = "De-risk S&P 500 exposure while copper/gold momentum deteriorates."
-    cadence = "Daily close; macro growth/risk overlay"
-    sizing_note = "Cross-asset macro filter, not a direct copper or gold trade."
 
     default_params = {
         "lookback": 10,

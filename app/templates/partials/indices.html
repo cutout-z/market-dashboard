@@ -1,7 +1,7 @@
 {% set periods = ["24h", "1W", "1M", "3M", "1Y", "5Y", "10Y"] %}
 
 {% macro pct_cell(val) %}
-<td class="py-1.5 px-1 text-right font-mono text-xs
+<td class="py-1.5 px-2 text-right font-mono text-xs
     {% if val is not none %}
         {% if val > 0 %}text-gain{% elif val < 0 %}text-loss{% else %}text-gray-500{% endif %}
     {% endif %}">
@@ -30,29 +30,48 @@
 {% endif %}
 {% endmacro %}
 
+{# Shared colgroup — identical in every table so columns align across panels #}
+{# Cols: name(230px) | country/etf(116px) | spark(66px) | price(104px) | 7×returns(82px) #}
+{% macro shared_colgroup() %}
+<colgroup>
+    <col style="width:230px">
+    <col style="width:116px">
+    <col style="width:66px">
+    <col style="width:104px">
+    <col style="width:82px">
+    <col style="width:82px">
+    <col style="width:82px">
+    <col style="width:82px">
+    <col style="width:82px">
+    <col style="width:82px">
+    <col style="width:82px">
+</colgroup>
+{% endmacro %}
+
 {% macro index_table(items, title) %}
 <div class="overflow-x-auto">
-    <table class="w-full text-xs">
+    <table class="w-full min-w-[1090px] text-xs table-fixed">
+        {{ shared_colgroup() }}
         <thead>
             <tr class="text-gray-500 border-b border-gray-800">
-                <th class="text-left py-2 pr-2 sticky left-0 bg-surface">Index</th>
-                <th class="text-left py-2 px-1 text-[10px]">Country</th>
-                <th class="py-2 px-1 w-12 text-[9px] text-gray-600">{{ spark_period | default('1W') }}</th>
-                <th class="text-right py-2 px-1">Price</th>
+                <th class="text-left py-2 pr-4 sticky left-0 bg-surface">Index</th>
+                <th class="text-left py-2 px-2 text-[10px]">Country</th>
+                <th class="py-2 px-2 text-[9px] text-gray-600">{{ spark_period | default('1W') }}</th>
+                <th class="text-right py-2 px-2">Price</th>
                 {% for p in periods %}
-                <th class="text-right py-2 px-1">{{ p }}</th>
+                <th class="text-right py-2 px-2">{{ p }}</th>
                 {% endfor %}
             </tr>
         </thead>
         <tbody>
             {% for item in items %}
             <tr class="border-b border-gray-800/30 hover:bg-surface-light">
-                <td class="py-1.5 pr-2 sticky left-0 bg-surface">
-                    <span class="font-medium text-gray-200 text-xs">{{ item.name }}</span>
+                <td class="py-1.5 pr-4 sticky left-0 bg-surface overflow-hidden">
+                    <span class="block font-medium text-gray-200 text-xs whitespace-nowrap truncate">{{ item.name }}</span>
                 </td>
-                <td class="py-1.5 px-1 text-[10px] text-gray-500">{{ item.country }}</td>
-                <td class="py-1.5 px-1">{{ sparkline(item.sparklines[spark_period] if item.sparklines else item.sparkline) }}</td>
-                <td class="py-1.5 px-1 text-right font-mono text-gray-300">
+                <td class="py-1.5 px-2 text-[10px] text-gray-500 overflow-hidden whitespace-nowrap truncate">{{ item.country }}</td>
+                <td class="py-1.5 px-2 text-center">{{ sparkline(item.sparklines[spark_period] if item.sparklines else item.sparkline) }}</td>
+                <td class="py-1.5 px-2 text-right font-mono text-gray-300">
                     {% if item.price is not none %}{{ "{:,.2f}".format(item.price) }}{% else %}—{% endif %}
                 </td>
                 {% for p in periods %}
@@ -82,26 +101,28 @@
     <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
         <h3 class="text-sm font-semibold text-gray-300 mb-3">S&P 500 Sectors</h3>
         <div class="overflow-x-auto">
-            <table class="w-full text-xs">
+            <table class="w-full min-w-[1090px] text-xs table-fixed">
+                {{ shared_colgroup() }}
                 <thead>
                     <tr class="text-gray-500 border-b border-gray-800">
-                        <th class="text-left py-2 pr-2 sticky left-0 bg-surface">Sector</th>
-                        <th class="py-2 px-1 w-12 text-[9px] text-gray-600">{{ spark_period | default('1W') }}</th>
-                        <th class="text-right py-2 px-1">Price</th>
+                        <th class="text-left py-2 pr-4 sticky left-0 bg-surface">Sector</th>
+                        <th class="text-left py-2 px-2 text-[10px]">ETF</th>
+                        <th class="py-2 px-2 text-[9px] text-gray-600">{{ spark_period | default('1W') }}</th>
+                        <th class="text-right py-2 px-2">Price</th>
                         {% for p in periods %}
-                        <th class="text-right py-2 px-1">{{ p }}</th>
+                        <th class="text-right py-2 px-2">{{ p }}</th>
                         {% endfor %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in sectors %}
                     <tr class="border-b border-gray-800/30 hover:bg-surface-light">
-                        <td class="py-1.5 pr-2 sticky left-0 bg-surface">
-                            <span class="font-medium text-gray-200">{{ item.name }}</span>
-                            <span class="text-[10px] text-gray-600 ml-1">{{ item.symbol }}</span>
+                        <td class="py-1.5 pr-4 sticky left-0 bg-surface overflow-hidden">
+                            <span class="block font-medium text-gray-200 whitespace-nowrap truncate">{{ item.name }}</span>
                         </td>
-                        <td class="py-1.5 px-1">{{ sparkline(item.sparklines[spark_period] if item.sparklines else item.sparkline) }}</td>
-                        <td class="py-1.5 px-1 text-right font-mono text-gray-300">
+                        <td class="py-1.5 px-2 text-[10px] text-gray-600 overflow-hidden whitespace-nowrap truncate">{{ item.symbol }}</td>
+                        <td class="py-1.5 px-2 text-center">{{ sparkline(item.sparklines[spark_period] if item.sparklines else item.sparkline) }}</td>
+                        <td class="py-1.5 px-2 text-right font-mono text-gray-300">
                             {% if item.price is not none %}{{ "{:.2f}".format(item.price) }}{% else %}—{% endif %}
                         </td>
                         {% for p in periods %}
@@ -119,28 +140,33 @@
     <div class="panel bg-surface rounded-lg border border-gray-800 p-4">
         <h3 class="text-sm font-semibold text-gray-300 mb-3">Defense & Aerospace</h3>
         <div class="overflow-x-auto">
-            <table class="w-full text-xs">
+            <table class="w-full min-w-[1090px] text-xs table-fixed">
+                {{ shared_colgroup() }}
                 <thead>
                     <tr class="text-gray-500 border-b border-gray-800">
-                        <th class="text-left py-2 pr-2 sticky left-0 bg-surface">Index</th>
-                        <th class="text-left py-2 px-1 text-[10px]">Tracks</th>
-                        <th class="py-2 px-1 w-12 text-[9px] text-gray-600">{{ spark_period | default('1W') }}</th>
-                        <th class="text-right py-2 px-1">Price</th>
+                        <th class="text-left py-2 pr-4 sticky left-0 bg-surface">Index</th>
+                        <th class="text-left py-2 px-2 text-[10px]">ETF</th>
+                        <th class="py-2 px-2 text-[9px] text-gray-600">{{ spark_period | default('1W') }}</th>
+                        <th class="text-right py-2 px-2">Price</th>
                         {% for p in periods %}
-                        <th class="text-right py-2 px-1">{{ p }}</th>
+                        <th class="text-right py-2 px-2">{{ p }}</th>
                         {% endfor %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in defense %}
                     <tr class="border-b border-gray-800/30 hover:bg-surface-light">
-                        <td class="py-1.5 pr-2 sticky left-0 bg-surface">
-                            <span class="font-medium text-gray-200 text-xs">{{ item.name }}</span>
-                            <span class="text-[10px] text-gray-600 ml-1">{{ item.symbol }}</span>
+                        <td class="py-1.5 pr-4 sticky left-0 bg-surface overflow-hidden">
+                            <span class="relative group cursor-default">
+                                <span class="block font-medium text-gray-200 text-xs whitespace-nowrap truncate">{{ item.name }}</span>
+                                {% if item.desc %}
+                                <span class="absolute bottom-full left-0 mb-1 hidden group-hover:block z-50 w-56 px-2 py-1.5 text-[10px] leading-relaxed text-gray-300 bg-gray-900 border border-gray-700 rounded shadow-lg whitespace-normal pointer-events-none">{{ item.desc }}</span>
+                                {% endif %}
+                            </span>
                         </td>
-                        <td class="py-1.5 px-1 text-[10px] text-gray-500">{{ item.desc }}</td>
-                        <td class="py-1.5 px-1">{{ sparkline(item.sparklines[spark_period] if item.sparklines else item.sparkline) }}</td>
-                        <td class="py-1.5 px-1 text-right font-mono text-gray-300">
+                        <td class="py-1.5 px-2 text-[10px] text-gray-600 overflow-hidden whitespace-nowrap truncate">{{ item.symbol }}</td>
+                        <td class="py-1.5 px-2 text-center">{{ sparkline(item.sparklines[spark_period] if item.sparklines else item.sparkline) }}</td>
+                        <td class="py-1.5 px-2 text-right font-mono text-gray-300">
                             {% if item.price is not none %}{{ "{:,.2f}".format(item.price) }}{% else %}—{% endif %}
                         </td>
                         {% for p in periods %}

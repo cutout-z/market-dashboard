@@ -45,23 +45,28 @@ class BaseSource(ABC):
         return None
 
     def _has_real_data(self, data: dict) -> bool:
-        """Check if fetched data contains actual values (not all nulls)."""
-        for key, val in data.items():
-            if key.startswith("_"):
-                continue
-            if isinstance(val, list) and val:
-                # Check if any item in the list has a non-null price
-                for item in val:
-                    if isinstance(item, dict) and item.get("price") is not None:
-                        return True
-            elif isinstance(val, dict) and val:
-                # Check nested categories (futures)
-                for sub_val in val.values():
-                    if isinstance(sub_val, list):
-                        for item in sub_val:
-                            if isinstance(item, dict) and item.get("price") is not None:
-                                return True
-        return False
+        """Check if fetched data contains usable non-empty values."""
+
+        def has_value(val) -> bool:
+            if val is None:
+                return False
+            if isinstance(val, bool):
+                return True
+            if isinstance(val, (int, float)):
+                return True
+            if isinstance(val, str):
+                return bool(val.strip())
+            if isinstance(val, list):
+                return any(has_value(item) for item in val)
+            if isinstance(val, dict):
+                return any(
+                    has_value(v)
+                    for k, v in val.items()
+                    if not str(k).startswith("_") and k != "error"
+                )
+            return True
+
+        return has_value(data)
 
     async def refresh(self) -> dict:
         t0 = time.time()

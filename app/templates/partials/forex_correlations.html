@@ -1,4 +1,5 @@
-<h3 class="text-sm font-semibold text-gray-300 mb-3">90-Day Pair Correlations</h3>
+{% set display_period = period | default('3M') %}
+{% set display_days = window_days | default(63) %}
 {% if labels and matrix %}
 <div class="overflow-x-auto">
     <table class="text-[11px]">
@@ -39,8 +40,8 @@
     </table>
 </div>
 <div class="mt-2 text-[10px] text-gray-600">
-    90-day rolling Pearson correlation of daily returns. Green = positive correlation, Red = negative.
+    {{ display_period }} rolling Pearson correlation of daily returns{% if display_days %} ({{ display_days }} trading days){% endif %}. Green = positive correlation, Red = negative.
 </div>
 {% else %}
-<div class="text-sm text-gray-500">Calculating correlations...</div>
+<div class="text-sm text-gray-500">Calculating {{ display_period }} correlations...</div>
 {% endif %}

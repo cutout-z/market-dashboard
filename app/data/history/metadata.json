@@ -1,10 +1,10 @@
 {
-  "last_updated": "2026-05-01",
-  "symbol_count": 135,
-  "total_rows": 813080,
+  "last_updated": "2026-05-10",
+  "symbol_count": 138,
+  "total_rows": 813779,
   "date_range": {
     "start": "1927-12-30",
-    "end": "2026-05-02"
+    "end": "2026-05-11"
   },
-  "file_size_mb": 15.2
+  "file_size_mb": 15.19
 }

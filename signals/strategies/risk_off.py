@@ -35,11 +35,6 @@ class RiskOffComposite(BaseStrategy):
         "(VIX spike, copper/gold selloff, DXY breakout, VIX term inversion)."
     )
     target_symbol = "^GSPC"
-    target_label = "S&P 500 / SPY / ES beta"
-    trade_long = "Maintain long S&P 500 exposure."
-    trade_flat = "De-risk S&P 500 exposure; use cash, T-bills, or defensive substitute."
-    cadence = "Daily close; tactical risk switch"
-    sizing_note = "Use as an equity-beta permission switch, not a standalone sizing model."
 
     # v4 defaults — best from autoresearch sweep 2026-05-02
     # Sharpe 0.855 vs v3 0.764 vs B&H 0.745
