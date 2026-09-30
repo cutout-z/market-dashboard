@@ -1,3 +1,5 @@
+> **Contract:** see `AGENTS.md` in this repo — the design-pass rules (branch, presentation-only, no secrets, no invented data, verify-then-push, handback note) apply to every session here. Repo facts live in that file's Facts table.
+
 # Market Dashboard
 
 Local-first market monitoring dashboard. Bloomberg morning stack (GMM/TOP/BTMM) concept built from free data sources.
