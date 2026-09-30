@@ -62,7 +62,6 @@ This repo is worked by more than one agent. Rules that keep that safe:
 
 ### Notes
 
-- **3 uncommitted path(s) at pass start.** Commit or stash them before starting, or a design diff is unreviewable (and the end-session sweep would commit them as one blob).
 - `CLAUDE.md` already exists — the pointer line was **not** inserted; add it by hand at the top so Claude Code loads this contract.
 - Existing docs worth reading first: `README.md`, `CLAUDE.md`
 
