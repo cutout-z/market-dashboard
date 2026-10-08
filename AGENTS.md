@@ -5,15 +5,14 @@ Read it before changing anything. Read the Facts block at the bottom for this re
 
 ## The five hard rules
 
-1. **Branch, never main.** Do design/UI work on `design/<topic>`. `main` stays deployable —
-   in some of these repos a push to main *is* a deploy. If the work isn't finished and verified,
+1. **Branch, never main.** Do design/UI work on `design/<topic>`. `main` stays deployable:
+   here a push to `main` can redeploy the public site (Facts). If the work isn't finished and verified,
    it stays on the branch.
 2. **Presentation only — never touch a data contract.** No changes to CSV columns, JSON keys,
    DB schemas, file paths, or anything an ETL job / lane / monitor reads or writes. If a design
    change seems to require a data change, stop and write it in the handback note instead.
 3. **No secrets, no private artifacts in the repo.** Never commit `.env`, keys, tokens,
-   credentials, or private snapshots. Secrets live in macOS Keychain (or Bitwarden for the
-   agent-facing path) — never in plaintext. `.gitignore`d private files stay ignored.
+   credentials, or private snapshots. Secrets live outside the repo, never in plaintext. `.gitignore`d private files stay ignored.
 4. **Never invent data.** Every number rendered must trace to a real, named source (API,
    filing, report, the repo's own data files). No interpolation, no estimates presented as
    facts, no placeholder values that could be mistaken for real ones.
@@ -30,7 +29,7 @@ End every session with **all four**:
       how it was verified, what was deliberately **not** touched, and any invariant you
       suspect you bent. This file is how the next agent (or the owner) reconstructs intent
       without the session transcript.
-- [ ] Live service restarted if the change needs it (see Facts), and the restart verified.
+- [ ] If the change needs the live service restarted, say so in the handback; restarting it needs the owner's yes.
 
 If you run out of time mid-change: commit what works, leave the branch pushed, and say
 clearly in the handback note what is half-done. **Never leave a half-finished change
@@ -53,12 +52,12 @@ This repo is worked by more than one agent. Rules that keep that safe:
 |---|---|
 | Default branch | main |
 | Remote | https://github.com/cutout-z/market-dashboard.git |
-| Served / deployed by | the live LaunchAgent, `com.<owner>.market-dashboard` (port 8060) |
-| Push semantics | a push to main changes what the local service serves (it runs from this directory); `deploy/` present (`market-backfill.service`, `market-backfill.timer`, `market-dashboard.service`, `setup.sh`) — read before assuming a push is inert; container build present (`Dockerfile` / `docker-compose.yml`) — a change may need a rebuild, not just a restart |
-| Tests (run before commit) | **none detected** — VERIFY: add the real command here |
-| Preview locally | `/opt/anaconda3/bin/uvicorn app.main:app --host 127.0.0.1 --port 92NN` — the live instance runs from this directory on port 8060. Start the design copy on a free port in the **9200 review band** (`worktree-setup.sh` prints the allocated one); never restart the live service to test a design change. |
+| Served / deployed by | **public:** Render (`render.yaml`; README "Current Runtime"). **private:** the owner's own server plus a local service on port 8060 (`app/config.py` `PORT`, `Dockerfile`). VERIFY which is live before restarting anything. |
+| Push semantics | treat `main` as **PUBLISHED**: a push can redeploy the public Render site (`render.yaml` does not set `autoDeploy`, and Render's default is to deploy on every push; check in Render) and is pulled by the private runtime (unverified: not in this repo). `deploy/*` (`market-backfill.service`, `market-backfill.timer`, `market-dashboard.service`, `setup.sh`) are rollback artifacts only (README "Current Runtime"); container build present (`Dockerfile` / `docker-compose.yml`) — a change may need a rebuild, not just a restart |
+| Tests (run before commit) | **none** — the repo tracks no test files (`git ls-files` matches no `test` path) and no test config; verify by running the app on a review port and checking it in a browser |
+| Preview locally | `uvicorn app.main:app --host 127.0.0.1 --port 9215` — 8060 is the live instance. Run the design copy on a free port in **9200–9249** (9215 is the default here; pick another in that range if it is taken; never 9250–9259); never restart the live service to test a design change. |
 | Data contracts you must not change | `app/data/` (.json, .parquet) |
-| Automated writers | a LaunchAgent runs it locally; the Hermes/Codex end-session sweep (commits + pushes dirty repos) |
+| Automated writers | the private runtime (unverified: not in this repo); an end-session sweep that commits and pushes dirty repos has been reported (unverified: not in this repo), so leave nothing uncommitted |
 
 ### What it is
 

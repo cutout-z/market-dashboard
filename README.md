@@ -4,20 +4,9 @@ Local-first market monitoring dashboard. Bloomberg morning stack concept built f
 
 ## Current Runtime
 
-As of the NAS cutover on 2026-05-29, the active private runtime is the QNAP NAS
-runner, not the old Hetzner/VPS deployment files in `deploy/`.
-
-- Private dashboard: the NAS host on the owner's tailnet, port 8060
-- NAS web service: `ai-wif-market-dashboard`
-- NAS autoresearch worker: `ai-wif-market-worker`
-- NAS higher-timeframe worker: `ai-wif-market-htf-worker`
-- NAS dispatcher: `runner-stack/scripts/qnap-run-job` on the NAS work share
-
-The historical `deploy/*.service`, `deploy/*.timer`, and `deploy/setup.sh`
-files are retained only as VPS migration/rollback artifacts. Do not infer the
-active scheduler from those files; use `tools/nas-runner/compose.yml`,
-`tools/nas-runner/scripts/nas-job`, and
-`tools/nas-runner/WORKFLOW_REMAP.md`.
+The private runtime is the owner's own server. The `deploy/*.service`, `deploy/*.timer`
+and `deploy/setup.sh` files are kept only as VPS rollback artifacts; do not infer the
+active scheduler from them. The public instance runs on Render (`render.yaml`).
 
 **Live public dashboard:** https://market-dashboard-o8mh.onrender.com/
 
@@ -27,10 +16,10 @@ The dashboard is a FastAPI application deployed on Render. It is not a GitHub Pa
 
 ```bash
 pip install -r requirements.txt
-uvicorn app.main:app --port 8060 --reload
+uvicorn app.main:app --port 9215 --reload
 ```
 
-Local dashboard: http://localhost:8060
+Local dashboard: http://localhost:9215 (8060 is the live instance)
 
 ## Health Check
 
