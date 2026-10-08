@@ -43,8 +43,8 @@ This repo is worked by more than one agent. Rules that keep that safe:
 - The branch convention above is the boundary — two agents editing the same *files* on
   different branches is fine; on the same branch it is not.
 - Don't delete or rewrite the other agent's files to make room for yours; extend instead.
-- `AGENTS.md` = Hermes' contract, `CLAUDE.md` = Claude Code's contract. Keep the shared
-  rules identical in both; repo facts live in one place and the other points at it.
+- `AGENTS.md` is the one contract for every agent; `CLAUDE.md` only imports it (`@AGENTS.md`).
+  Put rules and repo facts here, never in `CLAUDE.md`.
 - Read `docs/design-pass-*.md` before starting — it is the record of what changed last time.
 
 ## Facts — market-dashboard
@@ -153,6 +153,6 @@ red=geo, amber=macro, orange=trade, green=earnings, purple=tech, yellow=energy, 
 
 ### Notes
 
-- `CLAUDE.md` already exists — the pointer line was **not** inserted; add it by hand at the top so Claude Code loads this contract.
-- Existing docs worth reading first: `README.md`, `CLAUDE.md`
+- `CLAUDE.md` is a two-line `@AGENTS.md` import (2026-10-08); Claude Code loads this contract through it.
+- Existing docs worth reading first: `README.md`
 
