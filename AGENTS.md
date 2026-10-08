@@ -28,7 +28,7 @@ End every session with **all four**:
 - [ ] Branch pushed: `git push -u origin design/<topic>`.
 - [ ] `docs/design-pass-<YYYY-MM-DD>.md` written — what changed (files + visual summary),
       how it was verified, what was deliberately **not** touched, and any invariant you
-      suspect you bent. This file is how the next agent (or Zalen) reconstructs intent
+      suspect you bent. This file is how the next agent (or the owner) reconstructs intent
       without the session transcript.
 - [ ] Live service restarted if the change needs it (see Facts), and the restart verified.
 
@@ -53,7 +53,7 @@ This repo is worked by more than one agent. Rules that keep that safe:
 |---|---|
 | Default branch | main |
 | Remote | https://github.com/cutout-z/market-dashboard.git |
-| Served / deployed by | `com.zalen.market-dashboard` (port 8060) |
+| Served / deployed by | the live LaunchAgent, `com.<owner>.market-dashboard` (port 8060) |
 | Push semantics | a push to main changes what the local service serves (it runs from this directory); `deploy/` present (`market-backfill.service`, `market-backfill.timer`, `market-dashboard.service`, `setup.sh`) — read before assuming a push is inert; container build present (`Dockerfile` / `docker-compose.yml`) — a change may need a rebuild, not just a restart |
 | Tests (run before commit) | **none detected** — VERIFY: add the real command here |
 | Preview locally | `/opt/anaconda3/bin/uvicorn app.main:app --host 127.0.0.1 --port 92NN` — the live instance runs from this directory on port 8060. Start the design copy on a free port in the **9200 review band** (`worktree-setup.sh` prints the allocated one); never restart the live service to test a design change. |

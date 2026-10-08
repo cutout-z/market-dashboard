@@ -468,7 +468,7 @@ COMMODITIES = {
 }
 
 # ─── Commodity Research Notes ───
-OBSIDIAN_VAULT_PATH = Path("/Users/zalen/Library/Mobile Documents/iCloud~md~obsidian/Documents/ZC_Mac_Vault")
+OBSIDIAN_VAULT_PATH = Path.home() / "Library/Mobile Documents/iCloud~md~obsidian/Documents/ZC_Mac_Vault"
 COMMODITY_NOTES_DIR = OBSIDIAN_VAULT_PATH / "Commodities"
 
 # Flat lookup: symbol → {name, category, benchmark, drivers}

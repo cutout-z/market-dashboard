@@ -7,11 +7,11 @@ Local-first market monitoring dashboard. Bloomberg morning stack concept built f
 As of the NAS cutover on 2026-05-29, the active private runtime is the QNAP NAS
 runner, not the old Hetzner/VPS deployment files in `deploy/`.
 
-- Private dashboard: `znas.tail104fa2.ts.net:8060`
+- Private dashboard: the NAS host on the owner's tailnet, port 8060
 - NAS web service: `ai-wif-market-dashboard`
 - NAS autoresearch worker: `ai-wif-market-worker`
 - NAS higher-timeframe worker: `ai-wif-market-htf-worker`
-- NAS dispatcher: `/share/AI_Wif_Brain_Work/runner-stack/scripts/qnap-run-job`
+- NAS dispatcher: `runner-stack/scripts/qnap-run-job` on the NAS work share
 
 The historical `deploy/*.service`, `deploy/*.timer`, and `deploy/setup.sh`
 files are retained only as VPS migration/rollback artifacts. Do not infer the
