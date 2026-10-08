@@ -5,7 +5,7 @@ After=docker.service network-online.target market-dashboard.service
 Requires=docker.service
 
 # Active runtime moved to the QNAP NAS runner on 2026-05-29. Use:
-# /share/AI_Wif_Brain_Work/runner-stack/scripts/qnap-run-job market-backfill
+# <runner-stack>/scripts/qnap-run-job market-backfill
 
 [Service]
 Type=oneshot

@@ -84,7 +84,7 @@ Compile all agent results into a structured briefing. Output format:
 
 If the market dashboard is running (check if port 8060 is active), write the briefing to the news cache so it appears in the News & Alerts panel:
 
-Write a JSON file to `/Users/zalen/Documents/Zalen/AI Wif Brain Projects/market-dashboard/app/data/cache/deep_search_latest.json` with the briefing content.
+Write a JSON file to `app/data/cache/deep_search_latest.json` (relative to the repo root) with the briefing content.
 
 ## Rules
 - Speed over polish — this is a time-sensitive operation
