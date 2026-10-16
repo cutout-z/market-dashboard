@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# VPS retired 2026-05-29. This script installs the retired VPS/systemd setup and is kept only as history.
+# The NAS runner runs every lane; see ARCHITECTURE.md in the agent-contracts repo.
+echo "deploy/setup.sh: the VPS was retired on 2026-05-29; this script is history only. See ARCHITECTURE.md in agent-contracts." >&2
+exit 1
 # ARCHIVED VPS SETUP ONLY.
 #
 # Active runtime moved to the QNAP NAS runner on 2026-05-29:
