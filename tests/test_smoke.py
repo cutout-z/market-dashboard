@@ -1,4 +1,4 @@
-"""Smoke tests: every GET route answers (non-5xx) from an empty cache."""
+"""Smoke tests: every GET route answers 200 from an empty cache, with no source I/O."""
 
 import re
 
@@ -8,6 +8,13 @@ from fastapi.routing import APIRoute
 from app.main import app
 
 SAMPLE = {"symbol": "SPY"}
+# Required query params, so the handler runs instead of failing validation (422).
+QUERY = {
+    "/api/correlation": "?symbols=SPY,QQQ",
+    "/partials/commodity-research": "?symbol=GC=F",
+}
+# Routes allowed to answer something other than 200: none today.
+ALLOWED_STATUS: dict[str, set[int]] = {}
 
 
 def _get_routes():
@@ -17,7 +24,8 @@ def _get_routes():
 
 
 def _fill(path):
-    return re.sub(r"\{(\w+)\}", lambda m: SAMPLE.get(m.group(1), "x"), path)
+    filled = re.sub(r"\{(\w+)\}", lambda m: SAMPLE.get(m.group(1), "x"), path)
+    return filled + QUERY.get(path, "")
 
 
 def test_route_enumeration_found_routes():
@@ -26,16 +34,19 @@ def test_route_enumeration_found_routes():
     assert "/" in routes and "/api/status" in routes and "/partials/indices" in routes
 
 
-def test_no_refresh_or_network_on_requests(client, monkeypatch):
-    """Lifespan is not entered and no GET triggers a fetch."""
-    from app.sources.base import BaseSource
+def test_source_io_guard_fires(source_io_calls):
+    """The guard behind every route test raises something refresh() cannot swallow."""
+    import asyncio
 
-    async def boom(self):
-        raise AssertionError("source refresh/fetch called during a smoke test")
+    from app.sources.indices import IndicesSource
+    from conftest import SourceIOForbidden
 
-    monkeypatch.setattr(BaseSource, "refresh", boom)
-    assert client.get("/api/status").status_code == 200
-    assert client.get("/partials/indices").status_code < 500
+    with pytest.raises(SourceIOForbidden):
+        asyncio.run(IndicesSource().refresh())
+    with pytest.raises(SourceIOForbidden):
+        asyncio.run(IndicesSource().fetch())
+    assert len(source_io_calls) == 2
+    source_io_calls.clear()
 
 
 def test_network_guard_blocks_external():
@@ -48,9 +59,10 @@ def test_network_guard_blocks_external():
 
 
 @pytest.mark.parametrize("path", _get_routes())
-def test_get_route_not_5xx(client, path):
+def test_get_route_status(client, path):
     resp = client.get(_fill(path))
-    assert resp.status_code < 500, f"{path} -> {resp.status_code}: {resp.text[:200]}"
+    allowed = ALLOWED_STATUS.get(path, {200})
+    assert resp.status_code in allowed, f"{path} -> {resp.status_code}: {resp.text[:200]}"
 
 
 def test_main_page_renders_html(client):
@@ -84,3 +96,13 @@ def test_api_history_symbols_empty_state(client):
 def test_api_history_unknown_symbol(client):
     data = client.get("/api/history/SPY").json()
     assert data["symbol"] == "SPY" and data["data"] == []
+
+
+def test_api_correlation_runs_handler(client):
+    data = client.get("/api/correlation?symbols=SPY,QQQ").json()
+    assert data["error"] == "Insufficient data"  # empty history, handler ran
+
+
+def test_commodity_research_runs_handler(client):
+    resp = client.get("/partials/commodity-research?symbol=GC=F")
+    assert resp.status_code == 200 and "GC=F" in resp.text
