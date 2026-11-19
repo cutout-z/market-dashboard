@@ -16,6 +16,30 @@ POLYMARKET_HOST = "gamma-api.polymarket.com"
 POLYMARKET_API = f"https://{POLYMARKET_HOST}/events"
 
 
+async def _run(*cmd: str, timeout: float) -> tuple[int, bytes, bytes]:
+    """Run a command and always reap it.
+
+    asyncio.wait_for() alone only stops waiting: on timeout the child keeps
+    running and its stdout/stderr pipes stay open in this process. A hung curl
+    every refresh leaked those descriptors until the service hit the 256-file
+    limit (Errno 24, Nov 2026). Kill and reap on timeout or cancellation.
+    """
+    proc = await asyncio.create_subprocess_exec(
+        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+    except BaseException:
+        if proc.returncode is None:
+            try:
+                proc.kill()
+            except ProcessLookupError:
+                pass
+        await proc.wait()
+        raise
+    return proc.returncode, stdout, stderr
+
+
 class PolymarketSource(BaseSource):
     cache_key = "polymarket_events"
     refresh_interval = REFRESH_POLYMARKET
@@ -46,11 +70,10 @@ class PolymarketSource(BaseSource):
         """Use curl with --resolve to bypass DNS while keeping proper SNI/TLS."""
         try:
             # Resolve via Google DNS
-            dig = await asyncio.create_subprocess_exec(
-                "dig", "+short", POLYMARKET_HOST, "@8.8.8.8",
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            _, stdout, _ = await _run(
+                "dig", "+short", "+time=2", "+tries=1", POLYMARKET_HOST, "@8.8.8.8",
+                timeout=5,
             )
-            stdout, _ = await asyncio.wait_for(dig.communicate(), timeout=5)
             ips = [l.strip() for l in stdout.decode().strip().split("\n")
                    if l.strip() and l[0].isdigit()]
             if not ips:
@@ -59,13 +82,13 @@ class PolymarketSource(BaseSource):
             ip = ips[0]
             url = f"{POLYMARKET_API}?closed=false&order=volume&ascending=false&limit={POLYMARKET_EVENT_LIMIT}"
 
-            proc = await asyncio.create_subprocess_exec(
-                "curl", "-s", "--resolve", f"{POLYMARKET_HOST}:443:{ip}", url,
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            returncode, stdout, stderr = await _run(
+                "curl", "-sS", "--connect-timeout", "5", "--max-time", "12",
+                "--resolve", f"{POLYMARKET_HOST}:443:{ip}", url,
+                timeout=15,
             )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=15)
 
-            if proc.returncode != 0:
+            if returncode != 0:
                 return {"items": [], "error": f"curl error: {stderr.decode().strip()}"}
 
             raw = json.loads(stdout.decode())
