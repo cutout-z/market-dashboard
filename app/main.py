@@ -13,6 +13,8 @@ from app.sources.base import BaseSource
 from app.sources.historical import HistoricalData
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+# httpx logs every request at INFO (~40k lines a week); keep its warnings only.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger("market-dashboard")
 
 

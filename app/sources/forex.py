@@ -1,6 +1,6 @@
 """Forex pairs (multi-period returns), heatmap data, and correlations."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 import math
 
 from app.config import (
@@ -117,9 +117,9 @@ class ForexSource(BaseSource):
 
     @staticmethod
     def _first_current_year_index(timestamps: list[int], fallback_len: int) -> int:
-        current_year = datetime.utcnow().year
+        current_year = datetime.now(timezone.utc).year
         for idx, ts in enumerate(timestamps):
-            if datetime.utcfromtimestamp(ts).year == current_year:
+            if datetime.fromtimestamp(ts, timezone.utc).year == current_year:
                 return idx
         return max(0, fallback_len - 252)
 
