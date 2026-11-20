@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,6 +14,28 @@ from app.sources.base import BaseSource
 from app.sources.historical import HistoricalData
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+
+
+class _HttpxFailuresOnly(logging.Filter):
+    """httpx logs every request at INFO, the bulk of the service log (2026-11-19).
+
+    Keep only responses with status >= 400, with API keys in the URL redacted
+    (FRED and FMP put them in the query string); drop the rest.
+    """
+
+    _KEY = re.compile(r"((?:api_?key|apikey)=)[^&\s\"]+", re.IGNORECASE)
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if not (isinstance(args, tuple) and len(args) == 5 and isinstance(args[3], int)):
+            return True
+        if args[3] < 400:
+            return False
+        record.args = (args[0], self._KEY.sub(r"\1REDACTED", str(args[1])), *args[2:])
+        return True
+
+
+logging.getLogger("httpx").addFilter(_HttpxFailuresOnly())
 logger = logging.getLogger("market-dashboard")
 
 
