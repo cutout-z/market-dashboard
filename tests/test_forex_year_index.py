@@ -1,5 +1,8 @@
-"""forex's year-start lookup must not warn: under the live service its
-DeprecationWarning printed once per timestamp and filled a 44 GB log (Nov 2026)."""
+"""forex's year-start lookup must not warn. pandas (dtypes/common.py) sets
+simplefilter("always", DeprecationWarning) inside catch_warnings(), which is not
+thread-safe, so under the threaded live service the filter could stick at
+"always" and this lookup then printed one warning per timestamp: most of a
+44 GB log by Nov 2026."""
 
 import warnings
 from datetime import datetime, timezone
