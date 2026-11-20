@@ -30,6 +30,8 @@ def test_only_failed_requests_logged_with_keys_redacted():
             path = request.url.path
             if path == "/limited":
                 return httpx.Response(429)
+            if path == "/badreq":
+                return httpx.Response(400)
             if path == "/moved":
                 return httpx.Response(302)
             return httpx.Response(500 if "bad" in path else 200)
@@ -40,12 +42,14 @@ def test_only_failed_requests_logged_with_keys_redacted():
             c.get("https://example.test/bad?apikey=SECRET3")
             c.get("https://example.test/limited?api_key=SECRET4")
             c.get("https://example.test/moved")
+            c.get("https://example.test/badreq?apikey=SECRET5")
     finally:
         log.removeHandler(cap)
         log.setLevel(old_level)
 
-    assert len(cap.lines) == 3, cap.lines  # two 500s and the 429; the 200 and 302 dropped
-    assert sum("500" in l for l in cap.lines) == 2 and any("429" in l for l in cap.lines)
+    assert len(cap.lines) == 4, cap.lines  # two 500s, the 429 and the 400; the 200 and 302 dropped
+    assert sum("500" in l for l in cap.lines) == 2
+    assert any("429" in l for l in cap.lines) and any(" 400 " in l for l in cap.lines)
     joined = " ".join(cap.lines)
-    assert "SECRET" not in joined and joined.count("REDACTED") == 3
+    assert "SECRET" not in joined and joined.count("REDACTED") == 4
     assert "series=X" in joined and "x=1" in joined
