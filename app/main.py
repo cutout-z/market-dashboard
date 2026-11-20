@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 
 
 class _HttpxFailuresOnly(logging.Filter):
-    """httpx logs every request at INFO (about 23k lines, 85% of the log, on 2026-11-19).
+    """httpx logs every request at INFO, the bulk of the service log (2026-11-19).
 
     Keep only responses with status >= 400, with API keys in the URL redacted
     (FRED and FMP put them in the query string); drop the rest.

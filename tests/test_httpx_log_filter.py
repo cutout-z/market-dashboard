@@ -1,6 +1,6 @@
 """httpx request logging: failures kept (keys redacted), successes dropped.
 
-httpx logs every request at INFO; on 2026-11-19 that was 85% of the service log.
+httpx logs every request at INFO, most of the service log (2026-11-19).
 """
 
 import logging
@@ -27,18 +27,25 @@ def test_only_failed_requests_logged_with_keys_redacted():
     log.setLevel(logging.INFO)  # the service's level (basicConfig INFO); pytest may raise the root's
     try:
         def handler(request):
-            return httpx.Response(500 if "bad" in request.url.path else 200)
+            path = request.url.path
+            if path == "/limited":
+                return httpx.Response(429)
+            if path == "/moved":
+                return httpx.Response(302)
+            return httpx.Response(500 if "bad" in path else 200)
 
         with httpx.Client(transport=httpx.MockTransport(handler)) as c:
             c.get("https://example.test/ok?api_key=SECRET1")
             c.get("https://example.test/bad?series=X&api_key=SECRET2&x=1")
             c.get("https://example.test/bad?apikey=SECRET3")
+            c.get("https://example.test/limited?api_key=SECRET4")
+            c.get("https://example.test/moved")
     finally:
         log.removeHandler(cap)
         log.setLevel(old_level)
 
-    assert len(cap.lines) == 2, cap.lines
-    assert all("500" in l for l in cap.lines)
+    assert len(cap.lines) == 3, cap.lines  # two 500s and the 429; the 200 and 302 dropped
+    assert sum("500" in l for l in cap.lines) == 2 and any("429" in l for l in cap.lines)
     joined = " ".join(cap.lines)
-    assert "SECRET" not in joined and joined.count("REDACTED") == 2
+    assert "SECRET" not in joined and joined.count("REDACTED") == 3
     assert "series=X" in joined and "x=1" in joined
