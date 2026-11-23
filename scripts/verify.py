@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import signal
@@ -36,15 +37,17 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 LIVE_PORT = 8060
-RESERVED = range(9250, 9260)  # never used for review copies (AGENTS.md Facts)
+REVIEW_PORTS = range(9200, 9250)  # the review band (AGENTS.md Facts); 9250-9259 stay reserved
 
 # Sources allowed to come back empty, each with the reason it is known to and the
 # condition under which it is tolerated. Anything else empty is a failure.
 KNOWN_EMPTY = {
-    # FMP answers the earnings calendar with HTTP 403; the live cache last had data
-    # in 2026-05 (found 2026-11-23 while writing this recipe).
-    "earnings": ("FMP answers HTTP 403, so no earnings events (stale on live since 2026-05)",
-                 lambda cache: not cache.get("error") or "FMP" in str(cache.get("error"))),
+    # FMP answered the earnings calendar with HTTP 403 on 2026-11-23 and the source
+    # then returns an empty list with no error; the live cache last had data in 2026-05.
+    # Only that error-free empty is tolerated ("No FMP API key" fails), so a broken
+    # earnings change still passes: docs/verify.md lists it under what is not covered.
+    "earnings": ("FMP earnings calendar empty, no error (FMP answered HTTP 403 on 2026-11-23)",
+                 lambda cache: not cache.get("error")),
     # ForexFactory rate-limits; the live service polls it too, so a second instance
     # often gets HTTP 429. Only a 429 is tolerated: any other error fails.
     "economic_calendar": ("ForexFactory rate limit (HTTP 429)",
@@ -64,9 +67,25 @@ EMPTY_STATE = {
     "Loading VIX term structure...": None,
     "Loading earnings calendar...": "earnings",
     "Loading historical data...": None,
+    "No prediction market data": None,
+    ">No data<": None,
+    "No yield data available": None,
+    "CHAT holdings data unavailable.": None,
+    "No calendar events": "economic_calendar",
     "Internal Server Error": None,
     "Traceback": None,
 }
+# Empty-state texts a healthy main shows today, with how many times each may appear.
+# More than that fails. Each is a live defect, not a design choice; remove the entry
+# when it is fixed.
+KNOWN_GAPS = {
+    # /bonds UK Gilt curve: every UK yield from intl_bonds is null (live too, 2026-11-23).
+    "No yield data available": 1,
+}
+# Value fields a quote source fills with a number; a fetch that fails still echoes the
+# configured names and symbols with these as null, which has_data counts as data.
+VALUE_KEYS = ("price", "value")
+MIN_VALUE_SHARE = 0.5  # at least half of them must be numbers, per source
 # Currency: (source, how to find its newest date, max age in days).
 MAX_AGE_DAYS = {"fred_yields": 10, "cot": 14, "news_alerts": 3}
 # What each page must show at least, in the browser after HTMX settles:
@@ -147,21 +166,53 @@ def start_app(port: int, workdir: Path) -> subprocess.Popen:
     print(f"2. start the app on 127.0.0.1:{port} (fresh cache {workdir / 'cache'})", flush=True)
     (workdir / "cache").mkdir()
     log = open(workdir / "app.log", "w")
-    proc = subprocess.Popen([sys.executable, "-c", LAUNCHER, str(workdir / "cache"), str(port)],
+    # Own process group, so stop_app takes uvicorn and anything it spawned with it.
+    return subprocess.Popen([sys.executable, "-c", LAUNCHER, str(workdir / "cache"), str(port)],
                             cwd=REPO, stdout=log, stderr=subprocess.STDOUT,
                             start_new_session=True)
+
+
+def wait_ready(proc: subprocess.Popen, port: int, workdir: Path) -> bool:
     for _ in range(60):
         if proc.poll() is not None:
             break
         try:
             if get(f"http://127.0.0.1:{port}/api/sources", timeout=2)[0] == 200:
                 record(True, "app answers", f"pid {proc.pid}")
-                return proc
+                return True
         except OSError:
             pass
         time.sleep(1)
     record(False, "app answers", f"no answer in 60s; see {workdir / 'app.log'}")
-    raise SystemExit(finish(workdir))
+    return False
+
+
+def stop_app(proc: subprocess.Popen) -> None:
+    """Stop the app on every exit path: a leftover instance keeps polling every upstream."""
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+        proc.wait(timeout=15)
+    except ProcessLookupError:
+        pass
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)
+        proc.wait(timeout=5)
+
+
+def live_checkout() -> Path | None:
+    """The working directory of whatever listens on the live port, if anything does."""
+    try:
+        pids = subprocess.run(["lsof", "-nP", f"-iTCP:{LIVE_PORT}", "-sTCP:LISTEN", "-t"],
+                              capture_output=True, text=True, timeout=10).stdout.split()
+        for pid in pids:
+            out = subprocess.run(["lsof", "-a", "-p", pid, "-d", "cwd", "-Fn"],
+                                 capture_output=True, text=True, timeout=10).stdout
+            for line in out.splitlines():
+                if line.startswith("n"):
+                    return Path(line[1:]).resolve()
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return None
 
 
 def step_sources(base: str, timeout: int) -> dict:
@@ -193,7 +244,34 @@ def step_sources(base: str, timeout: int) -> dict:
     with_data = sum(1 for v in sources.values() if v["has_data"])
     record(with_data + len(empty_ok) == len(sources), "sources with real data",
            f"{with_data}/{len(sources)}, {len(empty_ok)} tolerated empty")
+    thin, checked = [], 0
+    for name, cache in status.items():
+        filled, total = _value_counts(cache)
+        if total:
+            checked += 1
+            if filled < total * MIN_VALUE_SHARE:
+                thin.append(f"{name} {filled}/{total}")
+    record(not thin, "quote values are numbers",
+           f"{checked} sources with price/value fields, each at least {MIN_VALUE_SHARE:.0%} filled"
+           + (f"; mostly null: {', '.join(thin)}" if thin else ""))
     return {"status": status, "empty_ok": empty_ok}
+
+
+def _value_counts(node) -> tuple[int, int]:
+    """(numeric, total) over every price/value field anywhere in a source's cache."""
+    filled = total = 0
+    if isinstance(node, dict):
+        for key, val in node.items():
+            if key in VALUE_KEYS:
+                total += 1
+                filled += isinstance(val, (int, float)) and not isinstance(val, bool)
+            f, t = _value_counts(val)
+            filled, total = filled + f, total + t
+    elif isinstance(node, list):
+        for item in node:
+            f, t = _value_counts(item)
+            filled, total = filled + f, total + t
+    return filled, total
 
 
 def _newest(name: str, cache: dict) -> datetime | None:
@@ -205,6 +283,12 @@ def _newest(name: str, cache: dict) -> datetime | None:
             except (KeyError, TypeError, ValueError):
                 pass
         return max(stamps) if stamps else None
+    if name == "fred_yields":
+        # The stalest of the Treasury series, so one fresh series can't hide the rest.
+        dates = [y.get("date") for y in cache.get("yields", [])]
+        if not dates or not all(dates):
+            return None
+        return datetime.fromisoformat(min(dates)).replace(tzinfo=timezone.utc)
     dates = re.findall(r'"(20\d\d-\d\d-\d\d)', json.dumps(cache))
     today = datetime.now(timezone.utc).date().isoformat()
     past = [d for d in dates if d <= today]
@@ -242,7 +326,8 @@ def _routes() -> tuple[list[str], list[str]]:
 
 
 def _empty_text_in(body: str, empty_ok: set) -> list[str]:
-    return [t for t, src in EMPTY_STATE.items() if t in body and src not in empty_ok]
+    return [t for t, src in EMPTY_STATE.items()
+            if body.count(t) > KNOWN_GAPS.get(t, 0) and src not in empty_ok]
 
 
 def step_routes(base: str, empty_ok: set) -> list[str]:
@@ -262,8 +347,14 @@ def step_routes(base: str, empty_ok: set) -> list[str]:
 
 BROWSER_PROBE = """() => {
   const plots = [...document.querySelectorAll('.js-plotly-plot')];
-  const emptyPlots = plots.filter(p => !(p.data || []).some(t =>
-      ['x','y','z','values','r','lat'].some(k => t[k] != null && t[k].length > 0)));
+  // A trace holds data when its value axis has a non-null entry: y (or z, values, r)
+  // when it has one, else x (histograms); dates on x with all-null y count as empty.
+  const filled = a => a != null && Array.prototype.some.call(a, v => v !== null && v !== undefined && v !== '');
+  const traceHasData = t => {
+    for (const k of ['y', 'z', 'values', 'r', 'lat']) if (t[k] != null) return filled(t[k]);
+    return filled(t.x);
+  };
+  const emptyPlots = plots.filter(p => !(p.data || []).some(traceHasData));
   return {plots: plots.length, emptyPlots: emptyPlots.length,
           svgs: document.querySelectorAll('main svg').length,
           rows: document.querySelectorAll('main tr').length,
@@ -353,11 +444,15 @@ def main() -> int:
     ap.add_argument("--keep", action="store_true", help="keep the temp dir (log, cache, screenshots)")
     args = ap.parse_args()
 
-    if args.port == LIVE_PORT or args.port in RESERVED or not 1024 < args.port < 65536:
-        print(f"refused: port {args.port} is the live service or reserved; use 9200-9249")
+    if args.port not in REVIEW_PORTS:
+        print(f"refused: port {args.port} is outside the review band; use 9200-9249")
         return 2
-    if "AI Wif Brain Projects" in str(REPO):
-        print(f"refused: {REPO} is the live checkout; run from a working clone or worktree")
+    live = live_checkout()
+    if live is None:
+        print(f"note: nothing listens on {LIVE_PORT}, so the live-checkout guard had nothing to compare")
+    elif live == REPO:
+        print(f"refused: {REPO} is the checkout the live service on {LIVE_PORT} runs from; "
+              "run from a working clone or worktree")
         return 2
     if not port_free(args.port):
         print(f"refused: port {args.port} is in use; pick another in 9200-9249 with --port")
@@ -366,23 +461,21 @@ def main() -> int:
     workdir = Path(tempfile.mkdtemp(prefix="market-dashboard-verify-"))
     print(f"verify {REPO} (HEAD {subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], cwd=REPO, capture_output=True, text=True).stdout.strip()}), work dir {workdir}\n")
     step_tests()
-    proc = start_app(args.port, workdir)
     base = f"http://127.0.0.1:{args.port}"
+    proc = start_app(args.port, workdir)
     try:
-        state = step_sources(base, args.timeout)
-        step_currency(state["status"])
-        pages = step_routes(base, state["empty_ok"])
-        if args.no_browser:
-            record(None, "browser check skipped", "--no-browser: nothing checked what a user sees")
-        else:
-            step_browser(base, pages, state["empty_ok"], workdir / "screenshots")
+        if wait_ready(proc, args.port, workdir):
+            state = step_sources(base, args.timeout)
+            step_currency(state["status"])
+            pages = step_routes(base, state["empty_ok"])
+            if args.no_browser:
+                record(None, "browser check skipped", "--no-browser: nothing checked what a user sees")
+            else:
+                step_browser(base, pages, state["empty_ok"], workdir / "screenshots")
+    except Exception as e:  # a crash mid-run is a failed check, reported through finish()
+        record(False, "recipe ran to the end", f"{type(e).__name__}: {str(e)[:200]}")
     finally:
-        try:
-            import os
-            os.killpg(proc.pid, signal.SIGTERM)
-            proc.wait(timeout=15)
-        except Exception:
-            proc.kill()
+        stop_app(proc)
     code = finish(workdir)
     if not args.keep and code == 0:
         shutil.rmtree(workdir, ignore_errors=True)

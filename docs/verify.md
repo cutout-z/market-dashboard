@@ -23,8 +23,9 @@ about 40 s for the browser pass. Needs the network, the FRED key the app already
 `requirements-dev.txt` plus `python -m playwright install chromium` (both already present
 under `/opt/anaconda3` on the Mac).
 
-The script refuses (exit 2) port 8060, ports 9250-9259, a port already in use, and a path
-inside the live checkout. It exits 0 when every check passes, 1 when any fails, and prints a
+The script refuses (exit 2) a port outside 9200-9249, a port already in use, and the checkout
+the live service on 8060 runs from (found from that process's working directory; when nothing
+listens on 8060 it says so and runs). It stops the app it started on every exit path. It exits 0 when every check passes, 1 when any fails, and prints a
 `RESULT:` line with the pass, warn and fail counts.
 
 ## Steps and what each must show
@@ -33,10 +34,10 @@ inside the live checkout. It exits 0 when every check passes, 1 when any fails, 
 |---|------|-------------|
 | 1 | Offline tests: `pytest -q tests` | exit 0 (66 passed on 2026-11-23) |
 | 2 | Start the app from this checkout on the review port, with the cache redirected to a fresh temp dir | `/api/sources` answers within 60 s. The empty cache means every source is fetched by this checkout's code; an old cache cannot hide a broken fetch |
-| 3 | Sources (`/api/sources`, `/api/status`) | all 21 sources fetched within the timeout, and each has real data, except the tolerated empties below |
-| 4 | Currency: the newest date inside the data, not the cache age | FRED yields at most 10 days old, CFTC COT at most 14, the newest news item at most 3. The committed price history behind `/analysis` is reported as a warning when over 7 days old |
-| 5 | Routes: every page and every HTMX partial, enumerated from the app | each answers 200, and no partial shows an empty-state text ("Loading ... data...", "No data available", "No news available") or a server error |
-| 6 | Browser: headless Chromium loads every page and waits for HTMX to settle | no console error, page error or failed request (HTTP 4xx/5xx); every Plotly chart holds data; each page meets its floor in `PAGE_FLOORS` (charts, svgs, table rows, text length, set at about half of a healthy run) |
+| 3 | Sources (`/api/sources`, `/api/status`) | all 21 sources fetched within the timeout; each has data by the app's own `has_data`, except the tolerated empties below; and in every source with `price` or `value` fields, at least half of them are numbers (`has_data` alone counts a quote list whose prices are all null as data) |
+| 4 | Currency: the newest date inside the data, not the cache age | the stalest US Treasury series on FRED at most 10 days old, CFTC COT at most 14, the newest news item at most 3. The committed price history behind `/analysis` is reported as a warning when over 7 days old |
+| 5 | Routes: every page and every HTMX partial, enumerated from the app | each answers 200, and no partial shows one of the empty-state texts listed in `EMPTY_STATE` in the script, or a server error |
+| 6 | Browser: headless Chromium loads every page and waits for HTMX to settle | no console error, page error or failed request (HTTP 4xx/5xx); every Plotly chart has a non-null value in some trace; each page meets its floor in `PAGE_FLOORS` (charts, svgs, table rows, text length, set at about half of a healthy run) |
 | - | App log | no Python traceback. Upstream 4xx/5xx responses (rate limits, retired FRED series) are listed as a warning |
 
 Then look at the result yourself: run with `--keep` and open the screenshots in the kept
@@ -51,8 +52,13 @@ These come up on a healthy run. A new one is a finding:
 - `economic_calendar` empty with `HTTP 429`: ForexFactory rate-limits, and the live service
   polls it too. Only a 429 is tolerated; any other error fails.
 - `earnings` empty: FMP answers the earnings calendar with HTTP 403 (the live cache last had
-  data in 2026-05). Any empty earnings result is tolerated, so the recipe cannot catch a broken
-  earnings change.
+  data in 2026-05). An empty result with no error is tolerated, so the recipe cannot catch a
+  broken earnings change; an error such as a missing FMP key fails.
+- `/bonds` shows "No yield data available" once: the UK Gilt curve, because every UK yield the
+  `intl_bonds` source returns is null (the live page too). `KNOWN_GAPS` in the script allows
+  that one; a second empty panel fails. Remove the entry when the UK feed is fixed.
+- `cot` older than 14 days fails when the CFTC delays its weekly report (a holiday or a
+  government shutdown): check the CFTC release schedule before treating it as a code fault.
 - Price history ends 2026-05-11: `app/data/history/` is committed data written by
   `etl/backfill.py`, not refreshed since.
 - Upstream errors: several OECD series on FRED answer HTTP 400 (retired), and repeated runs hit
